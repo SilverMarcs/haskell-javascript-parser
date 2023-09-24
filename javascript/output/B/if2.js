@@ -1,4 +1,4 @@
-if (false) {
+if ( (false) ) {
   const a = 1;
   const b = (a + 1);
 

@@ -464,7 +464,25 @@ parseFunction str =
         _ -> Nothing
 
 
--- pretty printing --
+-- pretty printing utility funcs --
+
+wrapWith :: Char -> Char -> String -> String
+wrapWith start end s = start : s ++ [end]
+
+parenthesize :: String -> String
+parenthesize = wrapWith '(' ')'
+
+spaceParenthesize :: String -> String
+spaceParenthesize content = "(" ++ " " ++ content ++ " " ++ ")"
+
+-- General multi-line checker
+isMultiLine :: String -> Bool
+isMultiLine s = length s > 42 || '\n' `elem` s
+
+-- Indentation logic
+indent :: String -> String
+indent = unlines . map ("  " ++) . lines
+
 
 -- Pretty print for ArithExpr
 prettyPrintArith :: ArithExpr -> String
@@ -479,7 +497,7 @@ prettyPrintLogic :: LogicExpr -> String
 prettyPrintLogic (LAnd a b) = parenthesize $ prettyPrintExpr a ++ " && " ++ prettyPrintExpr b
 prettyPrintLogic (LOr a b) = parenthesize $ prettyPrintExpr a ++ " || " ++ prettyPrintExpr b
 prettyPrintLogic (LNot a) = parenthesize $ "!" ++ prettyPrintExpr a
-prettyPrintLogic (LBool v) = prettyPrintJSValue v
+prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v
 
 
 -- Pretty print for CompareExpr
@@ -517,10 +535,6 @@ prettyPrintJSValue (JSBool True) = "true"
 prettyPrintJSValue (JSBool False) = "false"
 prettyPrintJSValue (JsVariable s) = s
 prettyPrintJSValue (JSList lst) = "[" ++ intercalate ", " (map prettyPrintJSValue lst) ++ "]"
-
--- Helper function to wrap a string with parentheses and ensure spaces are handled correctly
-parenthesize :: String -> String
-parenthesize s = "(" ++ s ++ ")"
 
 -- Pretty print the combined Expr
 prettyPrintExpr :: Expr -> String
@@ -590,23 +604,22 @@ prettyPrintBlock (Block stmts) =  -- if multiple statements, put each on a new l
   where
     indent = unlines . map ("  " ++) . lines  -- Two spaces for indenting
 
+prettyPrintBlockWithNewline :: Block -> String
+prettyPrintBlockWithNewline (Block []) = "{ }"
+prettyPrintBlockWithNewline (Block [stmt]) = "{" ++ prettyPrintStmt stmt ++ "}"
+prettyPrintBlockWithNewline (Block stmts) = 
+    "{\n" ++ indent (prettyPrintStmts stmts) ++ "}"
+
+-- A helper function to add space for the if block when an else block is present
+prettyPrintBlockWithSpace :: Block -> String
+prettyPrintBlockWithSpace block = 
+    init (prettyPrintBlock block) ++ "\n"
+
 
 prettyPrintConditional :: Conditional -> String
 prettyPrintConditional (If expr ifBlock Nothing) =
-    "if " ++ parenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlock ifBlock
-
+    "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlock ifBlock
 prettyPrintConditional (If expr ifBlock (Just elseBlock)) =
-    "if " ++ parenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlockIf ifBlock ++ " else " ++ prettyPrintBlockElse elseBlock
-  where
-    prettyPrintBlockIf (Block []) = "{ }"
-    prettyPrintBlockIf (Block [stmt]) = "{" ++ prettyPrintStmt stmt ++ "}"
-    prettyPrintBlockIf (Block stmts) =  -- if multiple statements, put each on a new line
-        "{\n" ++ indent (prettyPrintStmts stmts) ++ "\n}"
-
-    prettyPrintBlockElse (Block []) = "{ }"
-    prettyPrintBlockElse (Block [stmt]) = "{" ++ prettyPrintStmt stmt ++ "}"
-    prettyPrintBlockElse (Block stmts) =  -- if multiple statements, put each on a new line
-        "{\n" ++ indent (prettyPrintStmts stmts) ++ "}"
-
-    indent = unlines . map ("  " ++) . lines  -- Two spaces for indenting
+    "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlockWithSpace ifBlock
+    ++ "} else " ++ prettyPrintBlock elseBlock
 
