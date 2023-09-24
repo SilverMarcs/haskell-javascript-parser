@@ -345,7 +345,7 @@ jsString :: Parser JSValue
 jsString = tok $ JSString <$> (is '"' *> many (isNot '"') <* is '"')
 
 jsBool :: Parser JSValue
-jsBool = tok $ (string "true" $> JSBool True) <|> (string "false" $> JSBool False)
+jsBool = tok $ (stringTok "true" $> JSBool True) <|> (stringTok "false" $> JSBool False)
 
 jsVar :: Parser JSValue
 jsVar = JsVariable <$> varName
@@ -404,7 +404,6 @@ data ArithExpr = Add Expr Expr
                | Pow Expr Expr
                deriving (Eq, Show)
 
--- Parsers for individual operations
 addOp :: Parser ArithExpr
 addOp = binOp "+" Add
 
@@ -424,7 +423,7 @@ arithExpr :: Parser ArithExpr
 arithExpr = parenthesized (addOp <|> subOp <|> mulOp <|> divOp <|> powOp)
 
 
--- comparison --
+-- Comparison --
 
 data CompareExpr = Equals Expr Expr
                  | NotEquals Expr Expr
@@ -456,8 +455,8 @@ data TernaryExpr
 
 ternaryExpr :: Parser TernaryExpr
 ternaryExpr = parenthesized $
-    Ternary <$> expr <* tok (is '?')
-            <*> expr <* tok (is ':')
+    Ternary <$> expr <* charTok '?'
+            <*> expr <* charTok ':'
             <*> expr
 
 
@@ -489,22 +488,16 @@ varName :: Parser String
 varName = some (alpha <|> digit <|> is '_')
 
 constDecl :: Parser ConstDecl
-constDecl = do
-    tok (string "const")
-    name <- varName
-    spaces
-    tok (is '=')
-    e <- expr
-    tok (is ';')
-    return $ ConstDecl name e
+constDecl = ConstDecl <$> (stringTok "const" *> varName <* spaces <* charTok '=') <*> expr <* charTok ';'
 
 -- functions --
 
 data FuncArg = ArgVal JSValue | ArgExpr Expr deriving (Eq, Show)
-data FuncCall = FuncCall String [FuncArg] deriving (Eq, Show)
 
 funcArg :: Parser FuncArg
 funcArg = (ArgExpr <$> (parenthesized expr <|> expr)) <|> (ArgVal <$> jsValue) 
+
+data FuncCall = FuncCall String [FuncArg] deriving (Eq, Show)
 
 funcCall :: Parser FuncCall
 funcCall = do
@@ -512,15 +505,14 @@ funcCall = do
     args <- parenthesized $ sepBy funcArg commaTok
     return $ FuncCall name args
 
-
+-- func decl
 data FuncDecl = TailRecursiveFunc String [String] Block
               | NonTailRecursiveFunc String [String] Block
               deriving (Eq, Show)
 
-
 funcDecl :: Parser FuncDecl
 funcDecl = do
-    tok (string "function")
+    stringTok "function"
     fname <- varName
     params <- parenthesized $ sepBy varName commaTok
     body <- block
@@ -559,9 +551,9 @@ hasNestedFuncCall _ = False
 
 returnStmt :: Parser ReturnStmt
 returnStmt = do
-    tok (string "return")
+    stringTok "return"
     e <- ReturnExpr <$> expr -- This handles all expressions, including JSValue
-    tok (is ';')
+    charTok ';'
     return e
 
 
@@ -587,7 +579,7 @@ stmt :: Parser Stmt
 stmt = StmtConst <$> constDecl
    <|> StmtIf <$> conditional
    <|> StmtReturn <$> returnStmt 
-   <|> (StmtFuncCall <$> funcCall <* tok (is ';'))  -- because funcCall part of an epxression or appear as a statement, we only consume semi colon if it is a statement
+   <|> (StmtFuncCall <$> funcCall <* charTok ';')  -- because funcCall part of an epxression or appear as a statement, we only consume semi colon if it is a statement
    <|> StmtFuncDecl <$> funcDecl 
 
 
@@ -595,18 +587,14 @@ stmts :: Parser [Stmt]
 stmts = many stmt
 
 block :: Parser Block
-block = do
-    tok (is '{')
-    statements <- stmts
-    tok (is '}')
-    return $ Block statements
+block = Block <$> (charTok '{' *> stmts <* charTok '}')
 
 conditional :: Parser Conditional
 conditional = do
-    tok (string "if")
+    stringTok "if"
     condition <- parenthesized expr
     ifBlock <- block
-    elseBlock <- optional (tok (string "else") *> block)
+    elseBlock <- optional (stringTok "else" *> block)
     return $ If condition ifBlock elseBlock
 
 
