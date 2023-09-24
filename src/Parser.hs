@@ -196,7 +196,9 @@ falseToken = stringTok "false"
 
 -- | -----------------Exercises------------------ | --
 
--- custom JsValue types --
+-- | ------------------------
+-- | Custom JsValue types ---
+-- | ------------------------
 data JSValue = JSInt Int
              | JSString String
              | JSBool Bool
@@ -239,8 +241,9 @@ unaryOp op constructor = do
     constructor <$> expr
 
 
--- Logical --
-
+-- | -------------------------
+-- | -- Logical Expressions --
+-- | -------------------------
 data LogicExpr = LAnd Expr Expr
                | LOr Expr Expr
                | LNot Expr
@@ -262,7 +265,10 @@ jsBoolValue = LBool <$> (roundBracketed jsBool <|> jsBool)
 logicExpr :: Parser LogicExpr
 logicExpr = roundBracketed (logicNot <|> logicAnd <|> logicOr <|> jsBoolValue)
 
--- Arithmetic
+
+-- | ----------------------------
+-- | -- Arithmetic Expressions --
+-- | ----------------------------
 data ArithExpr = Add Expr Expr
                | Sub Expr Expr
                | Mul Expr Expr
@@ -288,9 +294,9 @@ powOp = binaryOp "**" Pow
 arithExpr :: Parser ArithExpr
 arithExpr = roundBracketed (addOp <|> subOp <|> mulOp <|> divOp <|> powOp)
 
-
--- Comparison --
-
+-- | ----------------------------
+-- | -- Comparison Expressions --
+-- | ----------------------------
 data CompareExpr = Equals Expr Expr
                  | NotEquals Expr Expr
                  | GreaterThan Expr Expr
@@ -313,8 +319,9 @@ compareExpr :: Parser CompareExpr
 compareExpr = roundBracketed (equalsOp <|> notEqualsOp <|> greaterThanOp <|> lessThanOp )
 
 
--- Ternary --
-
+-- | -------------------------
+-- | -- Ternary Expressions --
+-- | -------------------------
 data TernaryExpr
     = Ternary Expr Expr Expr
     deriving (Eq, Show)
