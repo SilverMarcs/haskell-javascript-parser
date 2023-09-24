@@ -323,15 +323,6 @@ bracketed open close p = tok (is open) *> p <* tok (is close)
 parenthesized :: Parser a -> Parser a
 parenthesized = bracketed '(' ')'
 
--- the 'choice' function returns the first successful parser from a list
--- choice :: [Parser a] -> Parser a
--- choice = foldr (<|>) (fail "No choice matched")
-
--- try :: Parser a -> Parser a
--- try p = Parser $ \input -> case parse p input of
---     Error _ -> Error (UnexpectedString input)
---     success -> success
-
 
 -- | -----------------Exercises------------------ | --
 
@@ -413,39 +404,24 @@ data ArithExpr = Add Expr Expr
                | Pow Expr Expr
                deriving (Eq, Show)
 
--- The main expression parser
-arithExpr :: Parser ArithExpr
-arithExpr = parenthesized (binaryOp expr)  
-
--- General binary operation parser using the specialized parsers
-binaryOp :: Parser Expr -> Parser ArithExpr
-binaryOp p = addOp p <|> subOp p <|> mulOp p <|> divOp p <|> powOp p
-
--- Helper to generate a parser for a binary operation
-binArithOp :: Parser Expr -> Char -> (Expr -> Expr -> ArithExpr) -> Parser ArithExpr
-binArithOp p op constructor = do
-    lhs <- p
-    tok (is op)
-    constructor lhs <$> p
-
 -- Parsers for individual operations
-addOp :: Parser Expr -> Parser ArithExpr
-addOp p = binArithOp p '+' Add
+addOp :: Parser ArithExpr
+addOp = binOp "+" Add
 
-subOp :: Parser Expr -> Parser ArithExpr
-subOp p = binArithOp p '-' Sub
+subOp :: Parser ArithExpr
+subOp = binOp "-" Sub
 
-mulOp :: Parser Expr -> Parser ArithExpr
-mulOp p = binArithOp p '*' Mul
+mulOp :: Parser ArithExpr
+mulOp = binOp "*" Mul
 
-divOp :: Parser Expr -> Parser ArithExpr
-divOp p = binArithOp p '/' Div
+divOp :: Parser ArithExpr
+divOp = binOp "/" Div
 
-powOp :: Parser Expr -> Parser ArithExpr
-powOp p = do
-    lhs <- p
-    tok (is '*' >> is '*')
-    Pow lhs <$> p
+powOp :: Parser ArithExpr
+powOp = binOp "**" Pow
+
+arithExpr :: Parser ArithExpr
+arithExpr = parenthesized (addOp <|> subOp <|> mulOp <|> divOp <|> powOp)
 
 
 -- comparison --
@@ -471,7 +447,8 @@ lessThanOp = binOp "<" LessThan
 compareExpr :: Parser CompareExpr
 compareExpr = parenthesized (equalsOp <|> notEqualsOp <|> greaterThanOp <|> lessThanOp ) 
 
--- ternary --
+
+-- Ternary --
 
 data TernaryExpr
     = Ternary Expr Expr Expr
@@ -484,7 +461,7 @@ ternaryExpr = parenthesized $
             <*> expr
 
 
--- general expression --
+-- General Expression --
 
 data Expr =
      FuncCallExpr FuncCall
@@ -493,7 +470,6 @@ data Expr =
     | Logical LogicExpr
     | Comparison CompareExpr
     | TernaryOp TernaryExpr
-
     deriving (Eq, Show)
 
 expr :: Parser Expr
@@ -503,7 +479,6 @@ expr = FuncCallExpr <$> funcCall
    <|> Logical <$> logicExpr
    <|> Comparison <$> compareExpr
    <|> TernaryOp <$> ternaryExpr
-
 
 
 -- const declaration --
