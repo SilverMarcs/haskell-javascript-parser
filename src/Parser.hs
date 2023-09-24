@@ -368,8 +368,21 @@ jsListItem p = bracketed '[' ']' (sepBy p commaTok)
 mixedList :: Parser JSValue
 mixedList = JSList <$> jsListItem jsValue
 
+-- Operations
 
--- logical --
+binOp :: String -> (Expr -> Expr -> a) -> Parser a
+binOp op constructor = do
+    lhs <- expr
+    stringTok op
+    constructor lhs <$> expr
+
+unaryOp :: String -> (Expr -> a) -> Parser a
+unaryOp op constructor = do
+    stringTok op
+    constructor <$> expr
+
+
+-- Logical --
 
 data LogicExpr = LAnd Expr Expr
                | LOr Expr Expr
@@ -377,38 +390,20 @@ data LogicExpr = LAnd Expr Expr
                | LBool JSValue
                deriving (Eq, Show)
 
-logicOperator :: String -> Parser String
-logicOperator = tok . string
-
-binaryLogicalOp :: String -> (Expr -> Expr -> LogicExpr) -> Parser LogicExpr
-binaryLogicalOp op constructor = parenthesized $ do
-    left <- expr
-    logicOperator op
-    constructor left <$> expr
-
-unaryLogicalOp :: String -> (Expr -> LogicExpr) -> Parser LogicExpr
-unaryLogicalOp op constructor = parenthesized $ do
-    logicOperator op
-    constructor <$> expr
-
 logicNot :: Parser LogicExpr
-logicNot = unaryLogicalOp "!" LNot
+logicNot = unaryOp "!" LNot
 
 logicAnd :: Parser LogicExpr
-logicAnd = binaryLogicalOp "&&" LAnd
+logicAnd = binOp "&&" LAnd
 
 logicOr :: Parser LogicExpr
-logicOr = binaryLogicalOp "||" LOr
+logicOr = binOp "||" LOr
 
-jsBoolValue :: Parser LogicExpr
+jsBoolValue :: Parser LogicExpr   -- we need this to handle the case where we have a boolean value without any logical operators
 jsBoolValue = LBool <$> (parenthesized jsBool <|> jsBool)
 
 logicExpr :: Parser LogicExpr
-logicExpr = logicNot <|> logicAnd <|> logicOr <|> jsBoolValue
-
-
-
--- arithmatic --
+logicExpr = parenthesized (logicNot <|> logicAnd <|> logicOr <|> jsBoolValue)
 
 -- Arithmetic
 data ArithExpr = Add Expr Expr
@@ -427,24 +422,24 @@ binaryOp :: Parser Expr -> Parser ArithExpr
 binaryOp p = addOp p <|> subOp p <|> mulOp p <|> divOp p <|> powOp p
 
 -- Helper to generate a parser for a binary operation
-binOp :: Parser Expr -> Char -> (Expr -> Expr -> ArithExpr) -> Parser ArithExpr
-binOp p op constructor = do
+binArithOp :: Parser Expr -> Char -> (Expr -> Expr -> ArithExpr) -> Parser ArithExpr
+binArithOp p op constructor = do
     lhs <- p
     tok (is op)
     constructor lhs <$> p
 
 -- Parsers for individual operations
 addOp :: Parser Expr -> Parser ArithExpr
-addOp p = binOp p '+' Add
+addOp p = binArithOp p '+' Add
 
 subOp :: Parser Expr -> Parser ArithExpr
-subOp p = binOp p '-' Sub
+subOp p = binArithOp p '-' Sub
 
 mulOp :: Parser Expr -> Parser ArithExpr
-mulOp p = binOp p '*' Mul
+mulOp p = binArithOp p '*' Mul
 
 divOp :: Parser Expr -> Parser ArithExpr
-divOp p = binOp p '/' Div
+divOp p = binArithOp p '/' Div
 
 powOp :: Parser Expr -> Parser ArithExpr
 powOp p = do
@@ -461,24 +456,17 @@ data CompareExpr = Equals Expr Expr
                  | LessThan Expr Expr
                  deriving (Eq, Show)
 
--- Helper to generate a parser for a binary comparison operation
-binCompOp :: Parser Expr -> String -> (Expr -> Expr -> CompareExpr) -> Parser CompareExpr
-binCompOp p op constructor = do
-    lhs <- p
-    tok (string op)
-    constructor lhs <$> p
-
 equalsOp :: Parser CompareExpr
-equalsOp = binCompOp expr "===" Equals
+equalsOp = binOp "===" Equals
 
 notEqualsOp :: Parser CompareExpr
-notEqualsOp = binCompOp expr "!==" NotEquals
+notEqualsOp = binOp "!==" NotEquals
 
 greaterThanOp :: Parser CompareExpr
-greaterThanOp = binCompOp expr ">" GreaterThan
+greaterThanOp = binOp ">" GreaterThan
 
 lessThanOp :: Parser CompareExpr
-lessThanOp = binCompOp expr "<" LessThan
+lessThanOp = binOp "<" LessThan
 
 compareExpr :: Parser CompareExpr
 compareExpr = parenthesized (equalsOp <|> notEqualsOp <|> greaterThanOp <|> lessThanOp ) 
@@ -511,7 +499,6 @@ data Expr =
 expr :: Parser Expr
 expr = FuncCallExpr <$> funcCall
    <|> JsVal <$> jsValue
-   <|> FuncCallExpr <$> funcCall
    <|> Arithmetic <$> arithExpr
    <|> Logical <$> logicExpr
    <|> Comparison <$> compareExpr
