@@ -342,15 +342,11 @@ constDecl = ConstDecl <$> (stringTok "const" *> tok varName <* charTok '=') <*> 
 
 -- functions --
 
-newtype FuncArg = ArgExpr Expr deriving (Eq, Show)
-
-funcArg :: Parser FuncArg
-funcArg = ArgExpr <$> (roundBracketed expr <|> expr)
-
-data FuncCall = FuncCall String [FuncArg] deriving (Eq, Show)
+-- funcArg is an expr
+data FuncCall = FuncCall String [Expr] deriving (Eq, Show)
 
 funcCall :: Parser FuncCall
-funcCall = FuncCall <$> varName <*> roundBracketed (commaSeparated funcArg)
+funcCall = FuncCall <$> varName <*> roundBracketed (commaSeparated expr)
 
 data FuncDecl = TailRecursiveFunc String [String] Block
               | NonTailRecursiveFunc String [String] Block
@@ -373,8 +369,8 @@ isTailRecursiveReturn :: String -> [String] -> ReturnStmt -> Bool
 isTailRecursiveReturn fname params (ReturnExpr (FuncCallExpr (FuncCall fname' args))) = fname == fname' && length args == length params && not (any hasNestedFuncCall args)
 isTailRecursiveReturn _ _ _ = False
 
-hasNestedFuncCall :: FuncArg -> Bool
-hasNestedFuncCall (ArgExpr (FuncCallExpr _)) = True
+hasNestedFuncCall :: Expr -> Bool
+hasNestedFuncCall (FuncCallExpr _) = True
 hasNestedFuncCall _ = False
 
 lastReturnStmt :: Block -> Maybe ReturnStmt
@@ -505,13 +501,10 @@ prettyPrintExpr (Comparison c) = prettyPrintComp c
 prettyPrintExpr (TernaryOp t) = prettyPrintTernary t
 prettyPrintExpr (FuncCallExpr f) = prettyPrintFuncCall f
 
-prettyPrintFuncArg :: FuncArg -> String
-prettyPrintFuncArg (ArgExpr expr) = prettyPrintExpr expr
-
 -- Pretty print for FuncCall
 prettyPrintFuncCall :: FuncCall -> String
-prettyPrintFuncCall (FuncCall name args) =
-    name ++ "(" ++ intercalate ", " (map prettyPrintFuncArg args) ++ ")"
+prettyPrintFuncCall (FuncCall name expr) =
+    name ++ "(" ++ intercalate ", " (map prettyPrintExpr expr) ++ ")"
 
 
 -- use this in other places too
@@ -550,8 +543,8 @@ prettyPrintTailOptimizedBlock fname params (Block stmts) =
     indent = unlines . map ("    " ++) . lines  -- Four spaces for indenting
 
     tailOptimizedAssignment :: Stmt -> String
-    tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ args)))) =
-        "[" ++ intercalate ", " (map prettyPrintFuncArg args) ++ "]"
+    tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ expr)))) =
+        "[" ++ intercalate ", " (map prettyPrintExpr expr) ++ "]"
 
 
 
