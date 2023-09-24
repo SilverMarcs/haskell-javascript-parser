@@ -475,10 +475,6 @@ parenthesize = wrapWith '(' ')'
 spaceParenthesize :: String -> String
 spaceParenthesize content = "(" ++ " " ++ content ++ " " ++ ")"
 
--- General multi-line checker
-isMultiLine :: String -> Bool
-isMultiLine s = length s > 42 || '\n' `elem` s
-
 shouldBeMultiLine :: String -> Bool
 shouldBeMultiLine s = length s > 42
 
@@ -486,29 +482,48 @@ shouldBeMultiLine s = length s > 42
 indent :: String -> String
 indent = unlines . map ("  " ++) . lines
 
+-- Helper function for binary operations
+binaryOpPrettyPrint :: String -> Expr -> Expr -> String
+binaryOpPrettyPrint op a b = parenthesize $ prettyPrintExpr a ++ " " ++ op ++ " " ++ prettyPrintExpr b
 
 -- Pretty print for ArithExpr
 prettyPrintArith :: ArithExpr -> String
-prettyPrintArith (Add a b) = parenthesize $ prettyPrintExpr a ++ " + " ++ prettyPrintExpr b
-prettyPrintArith (Sub a b) = parenthesize $ prettyPrintExpr a ++ " - " ++ prettyPrintExpr b
-prettyPrintArith (Mul a b) = parenthesize $ prettyPrintExpr a ++ " * " ++ prettyPrintExpr b
-prettyPrintArith (Div a b) = parenthesize $ prettyPrintExpr a ++ " / " ++ prettyPrintExpr b
-prettyPrintArith (Pow a b) = parenthesize $ prettyPrintExpr a ++ " ** " ++ prettyPrintExpr b
+prettyPrintArith (Add a b) = binaryOpPrettyPrint "+" a b
+prettyPrintArith (Sub a b) = binaryOpPrettyPrint "-" a b
+prettyPrintArith (Mul a b) = binaryOpPrettyPrint "*" a b
+prettyPrintArith (Div a b) = binaryOpPrettyPrint "/" a b
+prettyPrintArith (Pow a b) = binaryOpPrettyPrint "**" a b
 
 -- Pretty print for LogicExpr
 prettyPrintLogic :: LogicExpr -> String
-prettyPrintLogic (LAnd a b) = parenthesize $ prettyPrintExpr a ++ " && " ++ prettyPrintExpr b
-prettyPrintLogic (LOr a b) = parenthesize $ prettyPrintExpr a ++ " || " ++ prettyPrintExpr b
+prettyPrintLogic (LAnd a b) = binaryOpPrettyPrint "&&" a b
+prettyPrintLogic (LOr a b) = binaryOpPrettyPrint "||" a b
 prettyPrintLogic (LNot a) = parenthesize $ "!" ++ prettyPrintExpr a
 prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v
 
-
 -- Pretty print for CompareExpr
 prettyPrintComp :: CompareExpr -> String
-prettyPrintComp (Equals a b) = parenthesize $ prettyPrintExpr a ++ " === " ++ prettyPrintExpr b
-prettyPrintComp (NotEquals a b) = parenthesize $ prettyPrintExpr a ++ " !== " ++ prettyPrintExpr b
-prettyPrintComp (GreaterThan a b) = parenthesize $ prettyPrintExpr a ++ " > " ++ prettyPrintExpr b
-prettyPrintComp (LessThan a b) = parenthesize $ prettyPrintExpr a ++ " < " ++ prettyPrintExpr b
+prettyPrintComp (Equals a b) = binaryOpPrettyPrint "===" a b
+prettyPrintComp (NotEquals a b) = binaryOpPrettyPrint "!==" a b
+prettyPrintComp (GreaterThan a b) = binaryOpPrettyPrint ">" a b
+prettyPrintComp (LessThan a b) = binaryOpPrettyPrint "<" a b
+
+-- Pretty print for JSValue
+prettyPrintJSValue :: JSValue -> String
+prettyPrintJSValue (JSInt i) = show i
+prettyPrintJSValue (JSString s) = "\"" ++ s ++ "\""
+prettyPrintJSValue (JSBool b) = if b then "true" else "false"
+prettyPrintJSValue (JsVariable s) = s
+prettyPrintJSValue (JSList lst) = "[" ++ intercalate ", " (map prettyPrintJSValue lst) ++ "]"
+
+-- Pretty print the combined Expr
+prettyPrintExpr :: Expr -> String
+prettyPrintExpr (JsVal v) = prettyPrintJSValue v
+prettyPrintExpr (Arithmetic a) = prettyPrintArith a
+prettyPrintExpr (Logical l) = prettyPrintLogic l
+prettyPrintExpr (Comparison c) = prettyPrintComp c
+prettyPrintExpr (TernaryOp t) = prettyPrintTernary t
+prettyPrintExpr (FuncCallExpr f) = prettyPrintFuncCall f
 
 
 -- Pretty print for TernaryExpr
@@ -529,24 +544,6 @@ prettyPrintTernary (Ternary condition trueBranch falseBranch) =
                     ++ trueBranchStr
                     ++ delimiter ++ ": "
                     ++ falseBranchStr
-
--- Pretty print for JSValue
-prettyPrintJSValue :: JSValue -> String
-prettyPrintJSValue (JSInt i) = show i
-prettyPrintJSValue (JSString s) = "\"" ++ s ++ "\""
-prettyPrintJSValue (JSBool True) = "true"
-prettyPrintJSValue (JSBool False) = "false"
-prettyPrintJSValue (JsVariable s) = s
-prettyPrintJSValue (JSList lst) = "[" ++ intercalate ", " (map prettyPrintJSValue lst) ++ "]"
-
--- Pretty print the combined Expr
-prettyPrintExpr :: Expr -> String
-prettyPrintExpr (JsVal v) = prettyPrintJSValue v
-prettyPrintExpr (Arithmetic a) = prettyPrintArith a
-prettyPrintExpr (Logical l) = prettyPrintLogic l
-prettyPrintExpr (Comparison c) = prettyPrintComp c
-prettyPrintExpr (TernaryOp t) = prettyPrintTernary t
-prettyPrintExpr (FuncCallExpr f) = prettyPrintFuncCall f
 
 -- Pretty print for FuncCall
 prettyPrintFuncCall :: FuncCall -> String
