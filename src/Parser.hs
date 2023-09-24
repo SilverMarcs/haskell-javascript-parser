@@ -598,11 +598,10 @@ prettyPrintStmts = unlines . map prettyPrintStmt
 
 prettyPrintBlock :: Block -> String
 prettyPrintBlock (Block []) = "{ }" -- if no statements, just print empty braces. later create HOF to parenthesize with third brackets or even somethign that lets you input hwich bracket you wanna insert. create valid data type for three types of braces TODO
-prettyPrintBlock (Block [stmt]) = "{" ++ prettyPrintStmt stmt ++ "}"  -- if only one statement, don't put it on a new line
+prettyPrintBlock (Block [stmt]) = "{ " ++ prettyPrintStmt stmt ++ " }"  -- if only one statement, don't put it on a new line
 prettyPrintBlock (Block stmts) =  -- if multiple statements, put each on a new line
     "{\n" ++ indent (prettyPrintStmts stmts) ++ "}"
-  where
-    indent = unlines . map ("  " ++) . lines  -- Two spaces for indenting
+
 
 prettyPrintBlockWithNewline :: Block -> String
 prettyPrintBlockWithNewline (Block []) = "{ }"
