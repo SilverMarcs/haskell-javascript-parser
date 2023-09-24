@@ -185,6 +185,9 @@ quote = is '"'
 notQuote :: Parser Char
 notQuote = isNot '"'
 
+varName :: Parser String
+varName = some (alpha <|> digit <|> is '_')
+
 constToken, functionToken, ifToken, elseToken, returnToken, trueToken, falseToken :: Parser String
 constToken = stringTok "const"
 functionToken = stringTok "function"
@@ -353,25 +356,52 @@ expr = FuncCallExpr <$> funcCall
    <|> TernaryOp <$> ternaryExpr
 
 
--- const declaration --
-
+-- | ------------------------
+-- | -- Const declaration ---
+-- | ------------------------
 data ConstDecl = ConstDecl String Expr deriving (Eq, Show)
-
-varName :: Parser String
-varName = some (alpha <|> digit <|> is '_')
 
 constDecl :: Parser ConstDecl
 constDecl = endWithSemicolon $ ConstDecl <$> (constToken *> tok varName <* charTok '=') <*> expr
 
 
--- functions --
+-- | ------------------------
+-- | ---- Conditionals ------
+-- | ------------------------
+data Conditional = If Expr Block (Maybe Block) deriving (Eq, Show)
 
--- funcArg is an expr
+conditional :: Parser Conditional
+conditional = If
+    <$> (ifToken *> roundBracketed expr)
+    <*> block
+    <*> optional (elseToken *> block)
+
+-- | ------------------------
+-- | ------- Blocks ---------
+-- | ------------------------
+newtype Block = Block [Stmt] deriving (Eq, Show)
+
+block :: Parser Block
+block = Block <$> (charTok '{' *> stmts <* charTok '}')
+
+-- | ------------------------
+-- | ---- Functions -----
+-- | ------------------------
 data FuncCall = FuncCall String [Expr] deriving (Eq, Show)
 
 funcCall :: Parser FuncCall
 funcCall = FuncCall <$> varName <*> roundBracketed (commaSeparated expr)
 
+-- ReturnStmt Data & Parser
+data ReturnStmt = ReturnExpr Expr
+                | ReturnVal JSValue 
+                deriving (Eq, Show)
+
+returnStmt :: Parser ReturnStmt
+returnStmt = ReturnExpr <$> endWithSemicolon (returnToken *> expr)
+
+
+-- Function related Data & Parsers
 data FuncDecl = TailRecursiveFunc String [String] Block
               | NonTailRecursiveFunc String [String] Block
               deriving (Eq, Show)
@@ -385,8 +415,6 @@ funcDecl = do
     return $ if isTailRecursiveFunc fname params body 
              then TailRecursiveFunc fname params body 
              else NonTailRecursiveFunc fname params body
-
-
 
 isTailRecursiveFunc :: String -> [String] -> Block -> Bool
 isTailRecursiveFunc fname params block = maybe False (isTailRecursiveReturn fname params) (lastReturnStmt block)
@@ -404,14 +432,9 @@ lastReturnStmt (Block stmts) = case last stmts of
     StmtReturn returnStmt -> Just returnStmt
     _ -> Nothing
 
-returnStmt :: Parser ReturnStmt
-returnStmt = ReturnExpr <$> endWithSemicolon (returnToken *> expr)
-
-
-data ReturnStmt = ReturnExpr Expr
-                | ReturnVal JSValue deriving
-                (Eq, Show)
-
+-- | ------------------------
+-- | ----- Statements -------
+-- | ------------------------
 data Stmt = StmtConst ConstDecl
           | StmtIf Conditional
           | StmtFuncCall FuncCall
@@ -419,32 +442,16 @@ data Stmt = StmtConst ConstDecl
           | StmtFuncDecl FuncDecl
           deriving (Eq, Show)
 
-data Conditional = If Expr Block (Maybe Block) deriving (Eq, Show)
-
-newtype Block = Block [Stmt]
-  deriving (Eq, Show)
-
 stmt :: Parser Stmt
 stmt = StmtConst <$> constDecl
    <|> StmtIf <$> conditional
    <|> StmtReturn <$> returnStmt
-   <|> (StmtFuncCall <$> funcCall <* charTok ';')  -- because funcCall part of an epxression or appear as a statement, we only consume semi colon if it is a statement
+   <|> (StmtFuncCall <$> funcCall <* charTok ';')  -- because funcCall part of an expression or appear as a statement, we only consume semi colon if it is a statement
    <|> StmtFuncDecl <$> funcDecl
-
 
 stmts :: Parser [Stmt]
 stmts = many stmt
 
-block :: Parser Block
-block = Block <$> (charTok '{' *> stmts <* charTok '}')
-
-conditional :: Parser Conditional
-conditional = If
-    <$> (ifToken *> roundBracketed expr)
-    <*> block
-    <*> optional (elseToken *> block)
-
--- direct parsing --
 
 -- Helper function to extract function details from a string
 -- we need this since our custom function for detecting tail recursion has a different method signature
