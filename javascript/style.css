@@ -110,7 +110,7 @@ h2 {
   width: 100%;
 }
 
-.description > * {
+.description>* {
   margin: 2% 5% 0 5%;
 }
 
@@ -211,15 +211,15 @@ task {
   transition: 0.4s;
 }
 
-input:checked + .slider {
+input:checked+.slider {
   background-color: #1fb5ad;
 }
 
-input:focus + .slider {
+input:focus+.slider {
   box-shadow: 0 0 1px #1fb5ad;
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
   -webkit-transform: translateX(26px);
   -ms-transform: translateX(26px);
   transform: translateX(26px);
@@ -230,6 +230,8 @@ input:checked + .slider:before {
   border-color: #121619;
   border-width: 2px;
   padding: 5px;
+  width: 500;
+  /* this was added by me to see the prettyprinted output better */
 }
 
 embed {
