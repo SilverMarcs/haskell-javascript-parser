@@ -35,12 +35,6 @@ unexpectedCharParser = Parser . const . Error . UnexpectedChar
 
 -- | Return a parser that succeeds with a character off the input or fails with
 -- an error if the input is empty.
---
--- >>> parse char "abc"
--- Result >bc< 'a'
---
--- >>> isErrorResult (parse char "")
--- True
 char :: Parser Char
 char = Parser f
   where
@@ -48,15 +42,6 @@ char = Parser f
     f (x : xs) = Result xs x
 
 -- | Parse numbers as int until non-digit
-
----- >>> parse int "abc"
--- Result >bc< 'a'
---
--- >>> isErrorResult (parse int "")
--- True
---
--- >>> isErrorResult (parse int "a")
--- True
 int :: Parser Int
 int = Parser f
   where
@@ -67,12 +52,6 @@ int = Parser f
       Nothing -> Error $ UnexpectedChar (head x)
 
 -- | Write a parser that asserts that there is no remaining input.
---
--- >>> parse eof ""
--- Result >< ()
---
--- >>> isErrorResult (parse eof "abc")
--- True
 eof :: Parser ()
 eof = Parser f
   where
@@ -84,16 +63,8 @@ eof = Parser f
 -- | -------------------------------------------------
 -- | All of these parsers use the `satisfy` parser!
 -- | Return a parser that produces a character but fails if:
---
 --   * the input is empty; or
---
 --   * the character does not satisfy the given predicate.
---
--- >>> parse (satisfy isUpper) "Abc"
--- Result >bc< 'A'
---
--- >>> isErrorResult (parse (satisfy isUpper) "abc")
--- True
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy f = char >>= f'
   where
@@ -103,123 +74,51 @@ satisfy f = char >>= f'
       | otherwise = unexpectedCharParser c
 
 -- | Return a parser that produces the given character but fails if:
---
 --   * the input is empty; or
---
 --   * the produced character is not equal to the given character.
---
--- >>> parse (is 'c') "c"
--- Result >< 'c'
---
--- >>> isErrorResult (parse (is 'c') "")
--- True
---
--- >>> isErrorResult (parse (is 'c') "b")
--- True
 is :: Char -> Parser Char
 is = satisfy . (==)
 
 -- | Return a parser that produces any character but fails if:
---
 --   * the input is empty; or
---
 --   * the produced character is equal to the given character.
---
--- >>> parse (isNot 'c') "b"
--- Result >< 'b'
---
--- >>> isErrorResult (parse (isNot 'c') "")
--- True
---
--- >>> isErrorResult (parse (isNot 'c') "c")
--- True
 isNot :: Char -> Parser Char
 isNot = satisfy . (/=)
 
 -- | Write a function that parses one of the characters in the given string.
---
--- /Hint/: What does `elem` do? What are its parameters?
---
--- >>> parse (oneof "abc") "bcdef"
--- Result >cdef< 'b'
---
--- >>> isErrorResult (parse (oneof "abc") "def")
--- True
 oneof :: String -> Parser Char
 oneof = satisfy . flip elem
 
 -- | Write a function that parses any character, but fails if it is in the
 -- given string.
---
--- /Hint/: What does `notElem` do? What are its parameters?
---
--- >>> parse (noneof "bcd") "abc"
--- Result >bc< 'a'
---
--- >>> isErrorResult (parse (noneof "abcd") "abc")
--- True
 noneof :: String -> Parser Char
 noneof = satisfy . flip notElem
 
 -- | Return a parser that produces a character between '0' and '9' but fails if
---
---   * the input is empty; or
---
---   * the produced character is not a digit.
---
--- /Hint/: Use the 'isDigit' function
 digit :: Parser Char
 digit = satisfy isDigit
 
 -- | Return a parser that produces a space character but fails if
---
---   * the input is empty; or
---
---   * the produced character is not a space.
---
--- /Hint/: Use the 'isSpace' function
 space :: Parser Char
 space = satisfy isSpace
 
 -- | Return a parser that produces a lower-case character but fails if:
---
 --   * the input is empty; or
---
 --   * the produced character is not lower-case.
---
--- /Hint/: Use the 'isLower' function
 lower :: Parser Char
 lower = satisfy isLower
 
 -- | Return a parser that produces an upper-case character but fails if:
---
---   * the input is empty; or
---
---   * the produced character is not upper-case.
---
--- /Hint/: Use the 'isUpper' function
 upper :: Parser Char
 upper = satisfy isUpper
 
 -- | Return a parser that produces an alpha character but fails if:
---
 --   * the input is empty; or
---
 --   * the produced character is not alpha.
---
--- /Hint/: Use the 'isAlpha' function
 alpha :: Parser Char
 alpha = satisfy isAlpha
 
 -- | Write a parser that will parse zero or more spaces.
---
--- /Hint/: Remember the `space` parser!
---
--- >>> parse spaces " abc"
--- Result >abc< " "
---
--- >>> parse spaces "abc"
--- Result >abc< ""
 spaces :: Parser String
 spaces = many space
 
@@ -229,26 +128,10 @@ spaces = many space
 --   * the input is empty; or
 --
 --   * the first produced character is not a space.
---
--- /Hint/: Remember the `space` parser!
---
--- >>> parse spaces1 " abc"
--- Result >abc< " "
---
--- >>> isErrorResult $ parse spaces1 "abc"
--- True
 spaces1 :: Parser String
 spaces1 = some space
 
 -- | Write a function that parses the given string (fails otherwise).
---
--- /Hint/: Use 'is' and 'traverse'.
---
--- >>> parse (string "abc") "abcdef"
--- Result >def< "abc"
---
--- >>> isErrorResult (parse (string "abc") "bcdef")
--- True
 string :: String -> Parser String
 string = traverse is
 
@@ -256,58 +139,22 @@ string = traverse is
 -- | --------------- Token parsers -------------------
 -- | -------------------------------------------------
 
--- | Write a function that applies the given parser, then parses 0 or more
+-- |  a function that applies the given parser, then parses 0 or more
 -- spaces, then produces the result of the original parser.
---
--- /Hint/: You can use the Monad instance or Applicatives
---
--- >>> parse (tok (is 'a')) "a bc"
--- Result >bc< 'a'
---
--- >>> parse (tok (is 'a')) "abc"
--- Result >bc< 'a'
+
 tok :: Parser a -> Parser a
 tok p = spaces *> p <* spaces
 
--- tok p = do
---   r <- p
---   spaces
---   pure r
-
--- | Write a function that parses the given char followed by 0 or more spaces.
---
--- /Hint/: Remember the `is` parser
---
--- >>> parse (charTok 'a') "abc"
--- Result >bc< 'a'
---
--- >>> isErrorResult (parse (charTok 'a') "dabc")
--- True
+-- |  a function that parses the given char followed by 0 or more spaces.
 charTok :: Char -> Parser Char
 charTok = tok . is
 
--- | Write a parser that parses a comma ',' followed by 0 or more spaces.
---
--- /Hint/: We just implemented `charTok`
---
--- >>> parse commaTok ",123"
--- Result >123< ','
---
--- >>> isErrorResult( parse commaTok "1,23")
--- True
+-- | parser that parses a comma ',' followed by 0 or more spaces.
+
 commaTok :: Parser Char
 commaTok = charTok ','
 
--- | Write a function that parses the given string, followed by 0 or more
--- spaces.
---
--- /Hint/: Remember the `string` parser
---
--- >>> parse (stringTok "abc") "abc  "
--- Result >< "abc"
---
--- >>> isErrorResult (parse (stringTok "abc") "bc  ")
--- True
+-- | arses the given string, followed by 0 or more spaces.
 stringTok :: String -> Parser String
 stringTok = tok . string
 
@@ -320,8 +167,14 @@ sepBy1 p sep = (:) <$> p <*> many (sep *> spaces *> p)
 bracketed :: Char -> Char -> Parser a -> Parser a
 bracketed open close p = tok (is open) *> p <* tok (is close)
 
-parenthesized :: Parser a -> Parser a
-parenthesized = bracketed '(' ')'
+roundBracketed :: Parser a -> Parser a
+roundBracketed = bracketed '(' ')'
+
+squareBracketed :: Parser a -> Parser a
+squareBracketed = bracketed '[' ']'
+
+commaSeparated :: Parser a -> Parser [a]
+commaSeparated p = sepBy p commaTok
 
 
 -- | -----------------Exercises------------------ | --
@@ -350,14 +203,11 @@ jsBool = tok $ (stringTok "true" $> JSBool True) <|> (stringTok "false" $> JSBoo
 jsVar :: Parser JSValue
 jsVar = JsVariable <$> varName
 
+jsList :: Parser JSValue
+jsList = JSList <$> squareBracketed (commaSeparated jsValue)
+
 jsValue :: Parser JSValue
-jsValue = jsInt <|> jsString <|> jsBool <|> mixedList <|> jsVar
-
-jsListItem :: Parser a -> Parser [a]
-jsListItem p = bracketed '[' ']' (sepBy p commaTok)
-
-mixedList :: Parser JSValue
-mixedList = JSList <$> jsListItem jsValue
+jsValue = jsInt <|> jsString <|> jsBool <|> jsVar <|> jsList 
 
 -- Operations
 
@@ -391,10 +241,10 @@ logicOr :: Parser LogicExpr
 logicOr = binOp "||" LOr
 
 jsBoolValue :: Parser LogicExpr   -- we need this to handle the case where we have a boolean value without any logical operators
-jsBoolValue = LBool <$> (parenthesized jsBool <|> jsBool)
+jsBoolValue = LBool <$> (roundBracketed jsBool <|> jsBool)
 
 logicExpr :: Parser LogicExpr
-logicExpr = parenthesized (logicNot <|> logicAnd <|> logicOr <|> jsBoolValue)
+logicExpr = roundBracketed (logicNot <|> logicAnd <|> logicOr <|> jsBoolValue)
 
 -- Arithmetic
 data ArithExpr = Add Expr Expr
@@ -420,7 +270,7 @@ powOp :: Parser ArithExpr
 powOp = binOp "**" Pow
 
 arithExpr :: Parser ArithExpr
-arithExpr = parenthesized (addOp <|> subOp <|> mulOp <|> divOp <|> powOp)
+arithExpr = roundBracketed (addOp <|> subOp <|> mulOp <|> divOp <|> powOp)
 
 
 -- Comparison --
@@ -444,7 +294,7 @@ lessThanOp :: Parser CompareExpr
 lessThanOp = binOp "<" LessThan
 
 compareExpr :: Parser CompareExpr
-compareExpr = parenthesized (equalsOp <|> notEqualsOp <|> greaterThanOp <|> lessThanOp ) 
+compareExpr = roundBracketed (equalsOp <|> notEqualsOp <|> greaterThanOp <|> lessThanOp )
 
 
 -- Ternary --
@@ -454,7 +304,7 @@ data TernaryExpr
     deriving (Eq, Show)
 
 ternaryExpr :: Parser TernaryExpr
-ternaryExpr = parenthesized $
+ternaryExpr = roundBracketed $
     Ternary <$> expr <* charTok '?'
             <*> expr <* charTok ':'
             <*> expr
@@ -495,15 +345,13 @@ constDecl = ConstDecl <$> (stringTok "const" *> varName <* spaces <* charTok '='
 data FuncArg = ArgVal JSValue | ArgExpr Expr deriving (Eq, Show)
 
 funcArg :: Parser FuncArg
-funcArg = (ArgExpr <$> (parenthesized expr <|> expr)) <|> (ArgVal <$> jsValue) 
+funcArg = (ArgExpr <$> (roundBracketed expr <|> expr)) <|> (ArgVal <$> jsValue)
 
 data FuncCall = FuncCall String [FuncArg] deriving (Eq, Show)
 
 funcCall :: Parser FuncCall
-funcCall = do
-    name <- varName
-    args <- parenthesized $ sepBy funcArg commaTok
-    return $ FuncCall name args
+funcCall = FuncCall <$> varName <*> roundBracketed (commaSeparated funcArg)
+
 
 -- func decl
 data FuncDecl = TailRecursiveFunc String [String] Block
@@ -514,18 +362,27 @@ funcDecl :: Parser FuncDecl
 funcDecl = do
     stringTok "function"
     fname <- varName
-    params <- parenthesized $ sepBy varName commaTok
+    params <- roundBracketed (commaSeparated varName)
     body <- block
     if isTailRecursiveFunc fname params body
         then return $ TailRecursiveFunc fname params body
         else return $ NonTailRecursiveFunc fname params body
 
-
 isTailRecursiveFunc :: String -> [String] -> Block -> Bool
-isTailRecursiveFunc fname params (Block stmts) =
-    case last stmts of
-        StmtReturn returnStmt -> isTailRecursiveReturn fname params returnStmt
-        _ -> False
+isTailRecursiveFunc fname params block = maybe False (isTailRecursiveReturn fname params) (lastReturnStmt block)
+
+isTailRecursiveReturn :: String -> [String] -> ReturnStmt -> Bool
+isTailRecursiveReturn fname params (ReturnExpr (FuncCallExpr (FuncCall fname' args)))
+    | fname /= fname'                 = False
+    | length args /= length params    = False
+    | any hasNestedFuncCall args      = False
+    | otherwise                       = True
+isTailRecursiveReturn _ _ _            = False
+
+lastReturnStmt :: Block -> Maybe ReturnStmt
+lastReturnStmt (Block stmts) = case last stmts of
+    StmtReturn returnStmt -> Just returnStmt
+    _ -> Nothing
 
 isReturn :: Stmt -> Bool
 isReturn (StmtReturn _) = True
@@ -534,15 +391,6 @@ isReturn _ = False
 hasFuncCall :: String -> Stmt -> Bool
 hasFuncCall fname (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall fname' _)))) = fname == fname'
 hasFuncCall _ _ = False
-
-isTailRecursiveReturn :: String -> [String] -> ReturnStmt -> Bool
-isTailRecursiveReturn fname params (ReturnExpr (FuncCallExpr (FuncCall fname' args)))
-    | fname /= fname' = False
-    | length args /= length params = False
-    | any hasNestedFuncCall args = False
-    | otherwise = True
-isTailRecursiveReturn _ _ _ = False
-
 
 hasNestedFuncCall :: FuncArg -> Bool
 hasNestedFuncCall (ArgExpr (FuncCallExpr _)) = True
@@ -557,8 +405,8 @@ returnStmt = do
     return e
 
 
-data ReturnStmt = ReturnExpr Expr 
-                | ReturnVal JSValue deriving 
+data ReturnStmt = ReturnExpr Expr
+                | ReturnVal JSValue deriving
                 (Eq, Show)
 
 -- block --
@@ -566,8 +414,8 @@ data ReturnStmt = ReturnExpr Expr
 data Stmt = StmtConst ConstDecl
           | StmtIf Conditional
           | StmtFuncCall FuncCall
-          | StmtReturn ReturnStmt 
-          | StmtFuncDecl FuncDecl   
+          | StmtReturn ReturnStmt
+          | StmtFuncDecl FuncDecl
           deriving (Eq, Show)
 
 data Conditional = If Expr Block (Maybe Block) deriving (Eq, Show)
@@ -578,9 +426,9 @@ newtype Block = Block [Stmt]
 stmt :: Parser Stmt
 stmt = StmtConst <$> constDecl
    <|> StmtIf <$> conditional
-   <|> StmtReturn <$> returnStmt 
+   <|> StmtReturn <$> returnStmt
    <|> (StmtFuncCall <$> funcCall <* charTok ';')  -- because funcCall part of an epxression or appear as a statement, we only consume semi colon if it is a statement
-   <|> StmtFuncDecl <$> funcDecl 
+   <|> StmtFuncDecl <$> funcDecl
 
 
 stmts :: Parser [Stmt]
@@ -592,7 +440,7 @@ block = Block <$> (charTok '{' *> stmts <* charTok '}')
 conditional :: Parser Conditional
 conditional = do
     stringTok "if"
-    condition <- parenthesized expr
+    condition <- roundBracketed expr
     ifBlock <- block
     elseBlock <- optional (stringTok "else" *> block)
     return $ If condition ifBlock elseBlock
@@ -604,7 +452,7 @@ conditional = do
 -- we need this since our custom function for detecting tail recursion has a different method signature
 -- this function takes a string and returns a data type that can be analysed by our custom isTailRecursiveFunc function
 parseFunction :: String -> Maybe (String, [String], Block)
-parseFunction str = 
+parseFunction str =
     case parse funcDecl str of
         Result _ (TailRecursiveFunc fname params body) -> Just (fname, params, body)
         Result _ (NonTailRecursiveFunc fname params body) -> Just (fname, params, body)
@@ -719,16 +567,16 @@ prettyPrintFuncDecl (NonTailRecursiveFunc name args block) =
     "function " ++ name ++ "(" ++ intercalate ", " args ++ ") " ++ prettyPrintBlock block
 
 prettyPrintTailOptimizedBlock :: String -> [String] -> Block -> String
-prettyPrintTailOptimizedBlock fname params (Block stmts) = 
-    "{\n  while (true) {\n" ++ (indent . init . prettyPrintStmts $ initStmts) 
-    ++ "    [" ++ intercalate ", " params ++ "] = " 
+prettyPrintTailOptimizedBlock fname params (Block stmts) =
+    "{\n  while (true) {\n" ++ (indent . init . prettyPrintStmts $ initStmts)
+    ++ "    [" ++ intercalate ", " params ++ "] = "
     ++ tailOptimizedAssignment (last stmts) ++ ";\n  }\n}"
   where
     initStmts = init stmts  -- All statements except the last one
     indent = unlines . map ("    " ++) . lines  -- Four spaces for indenting
-    
+
     tailOptimizedAssignment :: Stmt -> String
-    tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ args)))) = 
+    tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ args)))) =
         "[" ++ intercalate ", " (map prettyPrintFuncArg args) ++ "]"
 
 
@@ -754,12 +602,12 @@ prettyPrintConditional (If expr ifBlock (Just elseBlock)) =
     "if " ++ parenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlockIf ifBlock ++ " else " ++ prettyPrintBlockElse elseBlock
   where
     prettyPrintBlockIf (Block []) = "{ }"
-    prettyPrintBlockIf (Block [stmt]) = "{" ++ prettyPrintStmt stmt ++ "}" 
+    prettyPrintBlockIf (Block [stmt]) = "{" ++ prettyPrintStmt stmt ++ "}"
     prettyPrintBlockIf (Block stmts) =  -- if multiple statements, put each on a new line
         "{\n" ++ indent (prettyPrintStmts stmts) ++ "\n}"
 
     prettyPrintBlockElse (Block []) = "{ }"
-    prettyPrintBlockElse (Block [stmt]) = "{" ++ prettyPrintStmt stmt ++ "}"  
+    prettyPrintBlockElse (Block [stmt]) = "{" ++ prettyPrintStmt stmt ++ "}"
     prettyPrintBlockElse (Block stmts) =  -- if multiple statements, put each on a new line
         "{\n" ++ indent (prettyPrintStmts stmts) ++ "}"
 
