@@ -176,6 +176,8 @@ squareBracketed = bracketed '[' ']'
 commaSeparated :: Parser a -> Parser [a]
 commaSeparated p = sepBy p commaTok
 
+endWithSemicolon :: Parser a -> Parser a
+endWithSemicolon p = p <* charTok ';'
 
 -- | -----------------Exercises------------------ | --
 
@@ -337,7 +339,7 @@ varName :: Parser String
 varName = some (alpha <|> digit <|> is '_')
 
 constDecl :: Parser ConstDecl
-constDecl = ConstDecl <$> (stringTok "const" *> tok varName <* charTok '=') <*> expr <* charTok ';'
+constDecl = endWithSemicolon $ ConstDecl <$> (stringTok "const" *> tok varName <* charTok '=') <*> expr
 
 
 -- functions --
@@ -379,7 +381,7 @@ lastReturnStmt (Block stmts) = case last stmts of
     _ -> Nothing
 
 returnStmt :: Parser ReturnStmt
-returnStmt = ReturnExpr <$> (stringTok "return" *> expr <* charTok ';')
+returnStmt = ReturnExpr <$> endWithSemicolon (stringTok "return" *> expr)
 
 
 data ReturnStmt = ReturnExpr Expr
