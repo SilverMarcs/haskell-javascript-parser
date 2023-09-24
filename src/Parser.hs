@@ -337,10 +337,7 @@ varName :: Parser String
 varName = some (alpha <|> digit <|> is '_')
 
 constDecl :: Parser ConstDecl
-constDecl = ConstDecl 
-        <$> (stringTok "const" *> tok varName <* charTok '=') 
-        <*> expr 
-        <* charTok ';'
+constDecl = ConstDecl <$> (stringTok "const" *> tok varName <* charTok '=') <*> expr <* charTok ';'
 
 
 -- functions --
@@ -365,9 +362,9 @@ funcDecl = do
     fname <- varName
     params <- roundBracketed (commaSeparated varName)
     body <- block
-    if isTailRecursiveFunc fname params body
-        then return $ TailRecursiveFunc fname params body
-        else return $ NonTailRecursiveFunc fname params body
+    let constructor = if isTailRecursiveFunc fname params body then TailRecursiveFunc else NonTailRecursiveFunc
+    return $ constructor fname params body
+
 
 isTailRecursiveFunc :: String -> [String] -> Block -> Bool
 isTailRecursiveFunc fname params block = maybe False (isTailRecursiveReturn fname params) (lastReturnStmt block)
@@ -386,11 +383,7 @@ lastReturnStmt (Block stmts) = case last stmts of
     _ -> Nothing
 
 returnStmt :: Parser ReturnStmt
-returnStmt = do
-    stringTok "return"
-    e <- ReturnExpr <$> expr -- This handles all expressions, including JSValue
-    charTok ';'
-    return e
+returnStmt = ReturnExpr <$> (stringTok "return" *> expr <* charTok ';')
 
 
 data ReturnStmt = ReturnExpr Expr
