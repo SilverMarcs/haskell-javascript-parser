@@ -179,6 +179,12 @@ commaSeparated p = sepBy p commaTok
 endWithSemicolon :: Parser a -> Parser a
 endWithSemicolon p = p <* charTok ';'
 
+quote :: Parser Char
+quote = is '"'
+
+notQuote :: Parser Char
+notQuote = isNot '"'
+
 constToken, functionToken, ifToken, elseToken, returnToken, trueToken, falseToken :: Parser String
 constToken = stringTok "const"
 functionToken = stringTok "function"
@@ -205,7 +211,7 @@ jsInt = tok $ JSInt <$> integer
     natural = read <$> some digit
 
 jsString :: Parser JSValue
-jsString = tok $ JSString <$> (is '"' *> many (isNot '"') <* is '"')
+jsString = tok $ JSString <$> (quote *> many notQuote <* quote)
 
 jsBool :: Parser JSValue
 jsBool = tok $ (trueToken $> JSBool True) <|> (falseToken $> JSBool False)
@@ -221,8 +227,8 @@ jsValue = jsInt <|> jsString <|> jsBool <|> jsVar <|> jsList
 
 -- Operations
 
-binOp :: String -> (Expr -> Expr -> a) -> Parser a
-binOp op constructor = do
+binaryOp :: String -> (Expr -> Expr -> a) -> Parser a
+binaryOp op constructor = do
     lhs <- expr
     stringTok op
     constructor lhs <$> expr
@@ -245,10 +251,10 @@ logicNot :: Parser LogicExpr
 logicNot = unaryOp "!" LNot
 
 logicAnd :: Parser LogicExpr
-logicAnd = binOp "&&" LAnd
+logicAnd = binaryOp "&&" LAnd
 
 logicOr :: Parser LogicExpr
-logicOr = binOp "||" LOr
+logicOr = binaryOp "||" LOr
 
 jsBoolValue :: Parser LogicExpr   -- we need this to handle the case where we have a boolean value without any logical operators
 jsBoolValue = LBool <$> (roundBracketed jsBool <|> jsBool)
@@ -265,19 +271,19 @@ data ArithExpr = Add Expr Expr
                deriving (Eq, Show)
 
 addOp :: Parser ArithExpr
-addOp = binOp "+" Add
+addOp = binaryOp "+" Add
 
 subOp :: Parser ArithExpr
-subOp = binOp "-" Sub
+subOp = binaryOp "-" Sub
 
 mulOp :: Parser ArithExpr
-mulOp = binOp "*" Mul
+mulOp = binaryOp "*" Mul
 
 divOp :: Parser ArithExpr
-divOp = binOp "/" Div
+divOp = binaryOp "/" Div
 
 powOp :: Parser ArithExpr
-powOp = binOp "**" Pow
+powOp = binaryOp "**" Pow
 
 arithExpr :: Parser ArithExpr
 arithExpr = roundBracketed (addOp <|> subOp <|> mulOp <|> divOp <|> powOp)
@@ -292,16 +298,16 @@ data CompareExpr = Equals Expr Expr
                  deriving (Eq, Show)
 
 equalsOp :: Parser CompareExpr
-equalsOp = binOp "===" Equals
+equalsOp = binaryOp "===" Equals
 
 notEqualsOp :: Parser CompareExpr
-notEqualsOp = binOp "!==" NotEquals
+notEqualsOp = binaryOp "!==" NotEquals
 
 greaterThanOp :: Parser CompareExpr
-greaterThanOp = binOp ">" GreaterThan
+greaterThanOp = binaryOp ">" GreaterThan
 
 lessThanOp :: Parser CompareExpr
-lessThanOp = binOp "<" LessThan
+lessThanOp = binaryOp "<" LessThan
 
 compareExpr :: Parser CompareExpr
 compareExpr = roundBracketed (equalsOp <|> notEqualsOp <|> greaterThanOp <|> lessThanOp )
@@ -369,8 +375,10 @@ funcDecl = do
     fname <- varName
     params <- roundBracketed (commaSeparated varName)
     body <- block
-    let constructor = if isTailRecursiveFunc fname params body then TailRecursiveFunc else NonTailRecursiveFunc
-    return $ constructor fname params body
+    return $ if isTailRecursiveFunc fname params body 
+             then TailRecursiveFunc fname params body 
+             else NonTailRecursiveFunc fname params body
+
 
 
 isTailRecursiveFunc :: String -> [String] -> Block -> Bool
