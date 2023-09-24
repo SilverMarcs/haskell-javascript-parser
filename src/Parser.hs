@@ -187,7 +187,6 @@ data JSValue = JSInt Int
              | JsVariable String
               deriving (Eq, Show)
 
-
 jsInt :: Parser JSValue
 jsInt = tok $ JSInt <$> integer
   where
@@ -338,7 +337,11 @@ varName :: Parser String
 varName = some (alpha <|> digit <|> is '_')
 
 constDecl :: Parser ConstDecl
-constDecl = ConstDecl <$> (stringTok "const" *> varName <* spaces <* charTok '=') <*> expr <* charTok ';'
+constDecl = ConstDecl 
+        <$> (stringTok "const" *> tok varName <* charTok '=') 
+        <*> expr 
+        <* charTok ';'
+
 
 -- functions --
 
@@ -352,8 +355,6 @@ data FuncCall = FuncCall String [FuncArg] deriving (Eq, Show)
 funcCall :: Parser FuncCall
 funcCall = FuncCall <$> varName <*> roundBracketed (commaSeparated funcArg)
 
-
--- func decl
 data FuncDecl = TailRecursiveFunc String [String] Block
               | NonTailRecursiveFunc String [String] Block
               deriving (Eq, Show)
@@ -372,30 +373,17 @@ isTailRecursiveFunc :: String -> [String] -> Block -> Bool
 isTailRecursiveFunc fname params block = maybe False (isTailRecursiveReturn fname params) (lastReturnStmt block)
 
 isTailRecursiveReturn :: String -> [String] -> ReturnStmt -> Bool
-isTailRecursiveReturn fname params (ReturnExpr (FuncCallExpr (FuncCall fname' args)))
-    | fname /= fname'                 = False
-    | length args /= length params    = False
-    | any hasNestedFuncCall args      = False
-    | otherwise                       = True
-isTailRecursiveReturn _ _ _            = False
-
-lastReturnStmt :: Block -> Maybe ReturnStmt
-lastReturnStmt (Block stmts) = case last stmts of
-    StmtReturn returnStmt -> Just returnStmt
-    _ -> Nothing
-
-isReturn :: Stmt -> Bool
-isReturn (StmtReturn _) = True
-isReturn _ = False
-
-hasFuncCall :: String -> Stmt -> Bool
-hasFuncCall fname (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall fname' _)))) = fname == fname'
-hasFuncCall _ _ = False
+isTailRecursiveReturn fname params (ReturnExpr (FuncCallExpr (FuncCall fname' args))) = fname == fname' && length args == length params && not (any hasNestedFuncCall args)
+isTailRecursiveReturn _ _ _ = False
 
 hasNestedFuncCall :: FuncArg -> Bool
 hasNestedFuncCall (ArgExpr (FuncCallExpr _)) = True
 hasNestedFuncCall _ = False
 
+lastReturnStmt :: Block -> Maybe ReturnStmt
+lastReturnStmt (Block stmts) = case last stmts of
+    StmtReturn returnStmt -> Just returnStmt
+    _ -> Nothing
 
 returnStmt :: Parser ReturnStmt
 returnStmt = do
@@ -408,8 +396,6 @@ returnStmt = do
 data ReturnStmt = ReturnExpr Expr
                 | ReturnVal JSValue deriving
                 (Eq, Show)
-
--- block --
 
 data Stmt = StmtConst ConstDecl
           | StmtIf Conditional
