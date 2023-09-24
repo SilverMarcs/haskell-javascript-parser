@@ -179,6 +179,15 @@ commaSeparated p = sepBy p commaTok
 endWithSemicolon :: Parser a -> Parser a
 endWithSemicolon p = p <* charTok ';'
 
+constToken, functionToken, ifToken, elseToken, returnToken, trueToken, falseToken :: Parser String
+constToken = stringTok "const"
+functionToken = stringTok "function"
+ifToken = stringTok "if"
+elseToken = stringTok "else"
+returnToken = stringTok "return"
+trueToken = stringTok "true"
+falseToken = stringTok "false"
+
 -- | -----------------Exercises------------------ | --
 
 -- custom JsValue types --
@@ -199,7 +208,7 @@ jsString :: Parser JSValue
 jsString = tok $ JSString <$> (is '"' *> many (isNot '"') <* is '"')
 
 jsBool :: Parser JSValue
-jsBool = tok $ (stringTok "true" $> JSBool True) <|> (stringTok "false" $> JSBool False)
+jsBool = tok $ (trueToken $> JSBool True) <|> (falseToken $> JSBool False)
 
 jsVar :: Parser JSValue
 jsVar = JsVariable <$> varName
@@ -208,7 +217,7 @@ jsList :: Parser JSValue
 jsList = JSList <$> squareBracketed (commaSeparated jsValue)
 
 jsValue :: Parser JSValue
-jsValue = jsInt <|> jsString <|> jsBool <|> jsVar <|> jsList 
+jsValue = jsInt <|> jsString <|> jsBool <|> jsVar <|> jsList
 
 -- Operations
 
@@ -339,7 +348,7 @@ varName :: Parser String
 varName = some (alpha <|> digit <|> is '_')
 
 constDecl :: Parser ConstDecl
-constDecl = endWithSemicolon $ ConstDecl <$> (stringTok "const" *> tok varName <* charTok '=') <*> expr
+constDecl = endWithSemicolon $ ConstDecl <$> (constToken *> tok varName <* charTok '=') <*> expr
 
 
 -- functions --
@@ -356,7 +365,7 @@ data FuncDecl = TailRecursiveFunc String [String] Block
 
 funcDecl :: Parser FuncDecl
 funcDecl = do
-    stringTok "function"
+    functionToken
     fname <- varName
     params <- roundBracketed (commaSeparated varName)
     body <- block
@@ -381,7 +390,7 @@ lastReturnStmt (Block stmts) = case last stmts of
     _ -> Nothing
 
 returnStmt :: Parser ReturnStmt
-returnStmt = ReturnExpr <$> endWithSemicolon (stringTok "return" *> expr)
+returnStmt = ReturnExpr <$> endWithSemicolon (returnToken *> expr)
 
 
 data ReturnStmt = ReturnExpr Expr
@@ -415,13 +424,10 @@ block :: Parser Block
 block = Block <$> (charTok '{' *> stmts <* charTok '}')
 
 conditional :: Parser Conditional
-conditional = do
-    stringTok "if"
-    condition <- roundBracketed expr
-    ifBlock <- block
-    elseBlock <- optional (stringTok "else" *> block)
-    return $ If condition ifBlock elseBlock
-
+conditional = If
+    <$> (ifToken *> roundBracketed expr)
+    <*> block
+    <*> optional (elseToken *> block)
 
 -- direct parsing --
 
