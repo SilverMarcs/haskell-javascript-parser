@@ -317,8 +317,11 @@ sepBy p sep = (p `sepBy1` sep) <|> pure []
 sepBy1 :: Parser a -> Parser b -> Parser [a]
 sepBy1 p sep = (:) <$> p <*> many (sep *> spaces *> p)
 
+bracketed :: Char -> Char -> Parser a -> Parser a
+bracketed open close p = tok (is open) *> p <* tok (is close)
+
 parenthesized :: Parser a -> Parser a
-parenthesized p = tok (is '(') *> p <* tok (is ')')
+parenthesized = bracketed '(' ')'
 
 -- the 'choice' function returns the first successful parser from a list
 -- choice :: [Parser a] -> Parser a
@@ -359,9 +362,8 @@ jsVar = JsVariable <$> varName
 jsValue :: Parser JSValue
 jsValue = jsInt <|> jsString <|> jsBool <|> mixedList <|> jsVar
 
-
 jsListItem :: Parser a -> Parser [a]
-jsListItem p = tok (is '[') *> sepBy p commaTok <* tok (is ']')
+jsListItem p = bracketed '[' ']' (sepBy p commaTok)
 
 mixedList :: Parser JSValue
 mixedList = JSList <$> jsListItem jsValue
@@ -488,12 +490,10 @@ data TernaryExpr
     deriving (Eq, Show)
 
 ternaryExpr :: Parser TernaryExpr
-ternaryExpr = parenthesized $ do
-    condition <- expr
-    tok (is '?')
-    trueBranch <- expr
-    tok (is ':')
-    Ternary condition trueBranch <$> expr
+ternaryExpr = parenthesized $
+    Ternary <$> expr <* tok (is '?')
+            <*> expr <* tok (is ':')
+            <*> expr
 
 
 -- general expression --
