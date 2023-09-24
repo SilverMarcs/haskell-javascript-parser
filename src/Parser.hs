@@ -342,10 +342,10 @@ constDecl = ConstDecl <$> (stringTok "const" *> tok varName <* charTok '=') <*> 
 
 -- functions --
 
-data FuncArg = ArgVal JSValue | ArgExpr Expr deriving (Eq, Show)
+newtype FuncArg = ArgExpr Expr deriving (Eq, Show)
 
 funcArg :: Parser FuncArg
-funcArg = (ArgExpr <$> (roundBracketed expr <|> expr)) <|> (ArgVal <$> jsValue)
+funcArg = ArgExpr <$> (roundBracketed expr <|> expr)
 
 data FuncCall = FuncCall String [FuncArg] deriving (Eq, Show)
 
@@ -506,7 +506,6 @@ prettyPrintExpr (TernaryOp t) = prettyPrintTernary t
 prettyPrintExpr (FuncCallExpr f) = prettyPrintFuncCall f
 
 prettyPrintFuncArg :: FuncArg -> String
-prettyPrintFuncArg (ArgVal jsVal) = prettyPrintJSValue jsVal
 prettyPrintFuncArg (ArgExpr expr) = prettyPrintExpr expr
 
 -- Pretty print for FuncCall
@@ -530,10 +529,6 @@ prettyPrintStmt (StmtIf conditional) = prettyPrintConditional conditional
 prettyPrintStmt (StmtFuncCall funcCall) = prettyPrintFuncCall funcCall ++ ";"
 prettyPrintStmt (StmtReturn returnStmt) = prettyPrintReturnStmt returnStmt
 prettyPrintStmt (StmtFuncDecl funcDecl) = prettyPrintFuncDecl funcDecl
-
-prettyPrintArg :: FuncArg -> String
-prettyPrintArg (ArgVal jsVal) = prettyPrintJSValue jsVal
-prettyPrintArg (ArgExpr expr) = prettyPrintExpr expr
 
 prettyPrintReturnStmt :: ReturnStmt -> String
 prettyPrintReturnStmt (ReturnExpr expr) = "return " ++ prettyPrintExpr expr ++ ";"
