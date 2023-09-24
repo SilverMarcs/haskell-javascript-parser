@@ -479,6 +479,9 @@ spaceParenthesize content = "(" ++ " " ++ content ++ " " ++ ")"
 isMultiLine :: String -> Bool
 isMultiLine s = length s > 42 || '\n' `elem` s
 
+shouldBeMultiLine :: String -> Bool
+shouldBeMultiLine s = length s > 42
+
 -- Indentation logic
 indent :: String -> String
 indent = unlines . map ("  " ++) . lines
@@ -550,10 +553,6 @@ prettyPrintFuncCall :: FuncCall -> String
 prettyPrintFuncCall (FuncCall name expr) =
     name ++ "(" ++ intercalate ", " (map prettyPrintExpr expr) ++ ")"
 
-
--- use this in other places too
-shouldBeMultiLine :: String -> Bool
-shouldBeMultiLine s = length s > 42
 
 -- pretty print a single ConstDecl
 prettyPrintConstDecl :: ConstDecl -> String
