@@ -186,7 +186,7 @@ notQuote = isNot '"'
 varName :: Parser String
 varName = some (alpha <|> digit <|> is '_')
 
-constToken, functionToken, ifToken, elseToken, returnToken, trueToken, falseToken :: Parser String
+constToken, functionToken, ifToken, elseToken, returnToken, trueToken, falseToken, lambdaToken :: Parser String
 constToken = stringTok "const"
 functionToken = stringTok "function"
 ifToken = stringTok "if"
@@ -194,6 +194,7 @@ elseToken = stringTok "else"
 returnToken = stringTok "return"
 trueToken = stringTok "true"
 falseToken = stringTok "false"
+lambdaToken = stringTok "=>"
 
 -- | -----------------Exercises------------------ | --
 
@@ -322,7 +323,7 @@ evalArithExpr = do
     case eval (Arithmetic e) of
         Just v  -> return v
         Nothing -> failed (UnexpectedString "Failed to evaluate arithmetic expression.")
-        
+
 -- | ----------------------------
 -- | -- Comparison Expressions --
 -- | ----------------------------
@@ -388,6 +389,7 @@ data Expr
   | Logical LogicExpr
   | Comparison CompareExpr
   | TernaryOp TernaryExpr
+  | LambdaFunc LambdaExpr
   deriving (Eq, Show)
 
 expr :: Parser Expr
@@ -398,6 +400,7 @@ expr =
     <|> Logical <$> logicExpr
     <|> Comparison <$> compareExpr
     <|> TernaryOp <$> ternaryExpr
+    <|> LambdaFunc <$> lambdaExpr
 
 
 -- | -------------------------
@@ -443,6 +446,18 @@ newtype Block = Block [Stmt] deriving (Eq, Show)
 
 block :: Parser Block
 block = Block <$> (charTok '{' *> stmts <* charTok '}')
+
+-- | ------------------------
+-- | ---- Lambda Funcs- -----
+-- | ------------------------
+data LambdaExpr = LambdaExpr [String] Expr deriving (Eq, Show)
+
+lambdaExpr :: Parser LambdaExpr
+lambdaExpr = do
+    params <- roundBracketed (commaSeparated varName)
+    l <- lambdaToken
+    LambdaExpr params <$> expr
+
 
 -- | ------------------------
 -- | ---- Functions -----
@@ -586,6 +601,15 @@ prettyPrintExpr (Logical l) = prettyPrintLogic l
 prettyPrintExpr (Comparison c) = prettyPrintComp c
 prettyPrintExpr (TernaryOp t) = prettyPrintTernary t
 prettyPrintExpr (FuncCallExpr f) = prettyPrintFuncCall f
+prettyPrintExpr (LambdaFunc l) = prettyPrintLambda l
+
+-- Pretty print for lambda expressions
+prettyPrintLambda :: LambdaExpr -> String
+prettyPrintLambda (LambdaExpr params expr) =
+  parenthesize (intercalate ", " params)
+      ++ " => "
+      ++ prettyPrintExpr expr
+
 
 -- Pretty print for TernaryExpr
 prettyPrintTernary :: TernaryExpr -> String
@@ -624,6 +648,9 @@ prettyPrintStmt (StmtFuncCall funcCall) = prettyPrintFuncCall funcCall ++ ";"
 prettyPrintStmt (StmtReturn returnStmt) = prettyPrintReturnStmt returnStmt
 prettyPrintStmt (StmtFuncDecl funcDecl) = prettyPrintFuncDecl funcDecl
 
+prettyPrintStmts :: [Stmt] -> String
+prettyPrintStmts = unlines . map prettyPrintStmt
+
 prettyPrintReturnStmt :: ReturnStmt -> String
 prettyPrintReturnStmt (ReturnExpr expr) = "return " ++ prettyPrintExpr expr ++ ";"
 prettyPrintReturnStmt (ReturnVal jsVal) = "return " ++ prettyPrintJSValue jsVal ++ ";"
@@ -650,8 +677,6 @@ prettyPrintTailOptimizedBlock fname params (Block stmts) =
     tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ expr)))) =
       "[" ++ intercalate ", " (map prettyPrintExpr expr) ++ "]"
 
-prettyPrintStmts :: [Stmt] -> String
-prettyPrintStmts = unlines . map prettyPrintStmt
 
 prettyPrintBlock :: Block -> String
 prettyPrintBlock (Block []) = "{ }" -- if no statements, just print empty braces. later create HOF to parenthesize with third brackets or even somethign that lets you input hwich bracket you wanna insert. create valid data type for three types of braces TODO

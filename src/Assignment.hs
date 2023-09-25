@@ -56,3 +56,11 @@ parseExerciseD = ExprValue . JsVal <$> evalUnifiedExpr
 
 prettyPrintExerciseD :: ADT -> String
 prettyPrintExerciseD (ExprValue (JsVal v)) = prettyPrintJSValue v
+
+-- | Extra Bonus section that parses lambda expressions/functions
+-- check out the test cases and results in javascript/inputs/E and javascript/output/E
+parseExerciseE :: Parser ADT
+parseExerciseE = StatementValues <$> stmts
+
+prettyPrintExerciseE :: ADT -> String
+prettyPrintExerciseE (StatementValues stmts) = prettyPrintStmts stmts
