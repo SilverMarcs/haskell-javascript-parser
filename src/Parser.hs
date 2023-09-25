@@ -778,14 +778,14 @@ prettyPrintTailOptimizedBlock fname params (Block stmts) =
   where
     initStmts = init stmts -- All statements except the last one
     indent = unlines . map ("    " ++) . lines -- Four spaces for indenting
-    tailOptimizedAssignment :: Stmt -> String
-    tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ expr)))) =
-      "[" ++ intercalate ", " (map prettyPrintExpr expr) ++ "]"
+
+tailOptimizedAssignment :: Stmt -> String
+tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ expr)))) = squareBracketize (interpolateArgs (map prettyPrintExpr expr))
 
 
 -- | Returns a string representation of a 'Block' with no newline characters.
 prettyPrintBlock :: Block -> String
-prettyPrintBlock (Block []) = curlyBracketize " " -- if no statements, just print empty braces. later create HOF to parenthesize with third brackets or even somethign that lets you input hwich bracket you wanna insert. create valid data type for three types of braces TODO
+prettyPrintBlock (Block []) = curlyBracketize " " 
 prettyPrintBlock (Block [stmt]) = spaceCurlyBracketize (prettyPrintStmt stmt)  -- if only one statement, don't put it on a new line
 prettyPrintBlock (Block stmts) = curlyBracketize ("\n" ++ indent (prettyPrintStmts stmts))   -- if multiple statements, put each on a new line
 
