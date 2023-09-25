@@ -1,4 +1,4 @@
 module Main (main) where
 
 main :: IO ()
-main = putStrLn "Hello, World!"
+main = putStrLn "Please instal npm packags before running the javascript bundle"
