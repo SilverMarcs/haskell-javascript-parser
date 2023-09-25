@@ -615,10 +615,10 @@ parseFunction str =
     _ -> Nothing
 
 -- | ------------------------
--- | ----- Preety Print -----
+-- | ----- Pretty Print -----
 -- | ------------------------
 
--- pretty printing helper functions --
+-- Helper Functions --
 
 -- | Wraps a string with the given start and end characters.
 wrapWith :: String -> String -> String -> String
@@ -636,11 +636,21 @@ spaceParenthesize = wrapWith "( " " )"
 squareBracketize :: String -> String
 squareBracketize = wrapWith "[" "]"
 
+-- | Wraps a string with curly brackets.
 curlyBracketize :: String -> String
 curlyBracketize = wrapWith "{" "}"
 
+-- | Wraps a string with curly brackets and adds spaces around it.
 spaceCurlyBracketize :: String -> String
 spaceCurlyBracketize = wrapWith "{ " " }"
+
+-- | Adds a semicolon to the end of a string.
+appendSemicolon :: String -> String
+appendSemicolon s = s ++ ";"
+
+-- | Interpolates a list of arguments.
+interpolateArgs :: [String] -> String
+interpolateArgs = intercalate ", "
 
 -- | Determines if a string should be printed on multiple lines.
 shouldBeMultiLine :: String -> Bool
@@ -650,39 +660,11 @@ shouldBeMultiLine s = length s > 42
 indent :: Int -> String -> String
 indent n = unlines . map (replicate (2 * n) ' ' ++) . lines
 
--- | Interpolates a list of arguments.
-interpolateArgs :: [String] -> String
-interpolateArgs = intercalate ", "
-
--- | Adds a semicolon to the end of a string.
-appendSemicolon :: String -> String
-appendSemicolon s = s ++ ";"
+-- Pretty Printing Expressions --
 
 -- | Helper function for pretty printing binary operations.
 binaryOpPrettyPrint :: String -> Expr -> Expr -> String
 binaryOpPrettyPrint op a b = parenthesize $ prettyPrintExpr a ++ " " ++ op ++ " " ++ prettyPrintExpr b
-
--- | Pretty prints an arithmetic expression.
-prettyPrintArith :: ArithExpr -> String
-prettyPrintArith (Add a b) = binaryOpPrettyPrint "+" a b
-prettyPrintArith (Sub a b) = binaryOpPrettyPrint "-" a b
-prettyPrintArith (Mul a b) = binaryOpPrettyPrint "*" a b
-prettyPrintArith (Div a b) = binaryOpPrettyPrint "/" a b
-prettyPrintArith (Pow a b) = binaryOpPrettyPrint "**" a b
-
--- | Pretty prints a logic expression.
-prettyPrintLogic :: LogicExpr -> String
-prettyPrintLogic (LAnd a b) = binaryOpPrettyPrint "&&" a b
-prettyPrintLogic (LOr a b) = binaryOpPrettyPrint "||" a b
-prettyPrintLogic (LNot a) = parenthesize $ "!" ++ prettyPrintExpr a
-prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v -- one of the test inputs have braces around single boolean, so i parenthsized it
-
--- | Pretty prints a comparison expression.
-prettyPrintComp :: CompareExpr -> String
-prettyPrintComp (Equals a b) = binaryOpPrettyPrint "===" a b
-prettyPrintComp (NotEquals a b) = binaryOpPrettyPrint "!==" a b
-prettyPrintComp (GreaterThan a b) = binaryOpPrettyPrint ">" a b
-prettyPrintComp (LessThan a b) = binaryOpPrettyPrint "<" a b
 
 -- | Pretty prints a JSValue.
 prettyPrintJSValue :: JSValue -> String
@@ -702,46 +684,36 @@ prettyPrintExpr (TernaryOp t) = prettyPrintTernary t
 prettyPrintExpr (FuncCallExpr f) = prettyPrintFuncCall f
 prettyPrintExpr (LambdaFunc l) = prettyPrintLambda l
 
--- Pretty Printers
-prettyPrintLambda :: LambdaExpr -> String
-prettyPrintLambda (LambdaExpr params expr) = 
-    parenthesize (interpolateArgs params) ++ " => " ++ prettyPrintExpr expr
+-- | Pretty prints an arithmetic expression.
+prettyPrintArith :: ArithExpr -> String
+prettyPrintArith (Add a b) = binaryOpPrettyPrint "+" a b
+prettyPrintArith (Sub a b) = binaryOpPrettyPrint "-" a b
+prettyPrintArith (Mul a b) = binaryOpPrettyPrint "*" a b
+prettyPrintArith (Div a b) = binaryOpPrettyPrint "/" a b
+prettyPrintArith (Pow a b) = binaryOpPrettyPrint "**" a b
 
-prettyPrintFuncCall :: FuncCall -> String
-prettyPrintFuncCall (FuncCall name expr) = 
-    name ++ parenthesize (interpolateArgs (map prettyPrintExpr expr))
+-- | Pretty prints a logic expression.
+prettyPrintLogic :: LogicExpr -> String
+prettyPrintLogic (LAnd a b) = binaryOpPrettyPrint "&&" a b
+prettyPrintLogic (LOr a b) = binaryOpPrettyPrint "||" a b
+prettyPrintLogic (LNot a) = parenthesize $ "!" ++ prettyPrintExpr a
+prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v -- one of the test inputs have braces around single boolean, so I parenthsized it
 
-prettyPrintFuncDeclCommon :: Int -> String -> [String] -> String -> String
-prettyPrintFuncDeclCommon n name args blockContent = 
-    "function " ++ name 
-    ++ parenthesize (interpolateArgs args) 
-    ++ " " 
-    ++ blockContent
+-- | Pretty prints a comparison expression.
+prettyPrintComp :: CompareExpr -> String
+prettyPrintComp (Equals a b) = binaryOpPrettyPrint "===" a b
+prettyPrintComp (NotEquals a b) = binaryOpPrettyPrint "!==" a b
+prettyPrintComp (GreaterThan a b) = binaryOpPrettyPrint ">" a b
+prettyPrintComp (LessThan a b) = binaryOpPrettyPrint "<" a b
 
-prettyPrintFuncDecl :: Int -> FuncDecl -> String
-prettyPrintFuncDecl n (TailRecursiveFunc name args block) =
-    prettyPrintFuncDeclCommon n name args (prettyPrintTailOptimizedBlock n name args block)
-
-prettyPrintFuncDecl n (NonTailRecursiveFunc name args block) = 
-    prettyPrintFuncDeclCommon n name args (prettyPrintBlock n block)
-
-prettyPrintConstDecl :: ConstDecl -> String
-prettyPrintConstDecl (ConstDecl name expr) = 
-    appendSemicolon $ "const " ++ name ++ " = " ++ prettyPrintExpr expr
-
-prettyPrintStmt :: Int -> Stmt -> String
-prettyPrintStmt n (StmtConst constDecl) = prettyPrintConstDecl constDecl
-prettyPrintStmt n (StmtIf conditional) = prettyPrintConditional n conditional
-prettyPrintStmt n (StmtFuncCall funcCall) = appendSemicolon $ prettyPrintFuncCall funcCall
-prettyPrintStmt n (StmtReturn returnStmt) = prettyPrintReturnStmt returnStmt
-prettyPrintStmt n (StmtFuncDecl funcDecl) = prettyPrintFuncDecl n funcDecl
-
-prettyPrintStmts :: Int -> [Stmt] -> String
-prettyPrintStmts n = unlines . map (prettyPrintStmt n)
-
-prettyPrintReturnStmt :: ReturnStmt -> String
-prettyPrintReturnStmt (ReturnExpr expr) = appendSemicolon $ "return " ++ prettyPrintExpr expr
-prettyPrintReturnStmt (ReturnVal jsVal) = appendSemicolon $ "return " ++ prettyPrintJSValue jsVal
+-- | Pretty print for TernaryExpr
+prettyPrintTernary :: TernaryExpr -> String
+prettyPrintTernary (Ternary condition trueBranch falseBranch) =
+  parenthesize $
+    formatTernary
+      (prettyPrintExpr condition) -- print the condition
+      (prettyPrintExpr trueBranch) -- print the true branch
+      (prettyPrintExpr falseBranch) -- print the false branch
 
 -- | Formats the Ternary Expression
 formatTernary :: String -> String -> String -> String
@@ -749,54 +721,98 @@ formatTernary conditionStr trueBranchStr falseBranchStr =
   let combinedStr = conditionStr ++ "? " ++ trueBranchStr ++ ": " ++ falseBranchStr
       delimiter = if shouldBeMultiLine combinedStr then "\n" else " "
    in conditionStr
-        ++ delimiter
-        ++ "? "
-        ++ trueBranchStr
-        ++ delimiter
-        ++ ": "
-        ++ falseBranchStr
+        ++ delimiter -- if the ternary expression is too long, put the delimiter on a new line
+        ++ "? " -- print the condition
+        ++ trueBranchStr -- print the true branch
+        ++ delimiter -- if the ternary expression is too long, put the delimiter on a new line
+        ++ ": " -- print the false branch
+        ++ falseBranchStr -- print the false branch
 
--- | Pretty print for TernaryExpr
-prettyPrintTernary :: TernaryExpr -> String
-prettyPrintTernary (Ternary condition trueBranch falseBranch) =
-  parenthesize $
-    formatTernary
-      (prettyPrintExpr condition)
-      (prettyPrintExpr trueBranch)
-      (prettyPrintExpr falseBranch)
+-- Function and Lambda Expressions --
 
+-- | Pretty prints a lambda expression.
+prettyPrintLambda :: LambdaExpr -> String
+prettyPrintLambda (LambdaExpr params expr) = 
+    parenthesize (interpolateArgs params) ++ " => " ++ prettyPrintExpr expr -- print the lambda parameters and the expression
+
+-- | Pretty prints a function call.
+prettyPrintFuncCall :: FuncCall -> String
+prettyPrintFuncCall (FuncCall name expr) = 
+    name ++ parenthesize (interpolateArgs (map prettyPrintExpr expr)) -- print the function name and arguments
+
+-- | Pretty prints a function declaration.
+prettyPrintFuncDeclCommon :: Int -> String -> [String] -> String -> String
+prettyPrintFuncDeclCommon n name args blockContent = 
+    "function " ++ name -- print the function name
+    ++ parenthesize (interpolateArgs args) -- print the function arguments
+    ++ " "
+    ++ blockContent -- print the function body
+
+-- | Pretty prints a function declaration.
+prettyPrintFuncDecl :: Int -> FuncDecl -> String
+prettyPrintFuncDecl n (TailRecursiveFunc name args block) =
+    prettyPrintFuncDeclCommon n name args (prettyPrintTailOptimizedBlock n name args block) -- print the function declaration with the tail-optimized block
+
+prettyPrintFuncDecl n (NonTailRecursiveFunc name args block) = 
+    prettyPrintFuncDeclCommon n name args (prettyPrintBlock n block) -- print the function declaration with the normal block
+
+-- | Pretty prints a tail-optimized block.
 prettyPrintTailOptimizedBlock :: Int -> String -> [String] -> Block -> String
 prettyPrintTailOptimizedBlock n fname params (Block stmts) =
     "{\n"
     ++ indent n "while ( true ) {\n"
-    ++ indent (n + 1) (init (prettyPrintStmts (n + 1) initStmts))
-    ++ indent (n + 1) (squareBracketize (interpolateArgs params) ++ " = " ++ appendSemicolon (tailOptimizedAssignment (last stmts)))
-    ++ indent n "}\n"
-    ++ indent (n - 1) "}"
+    ++ indent (n + 1) (init (prettyPrintStmts (n + 1) initStmts)) -- print all statements except the last one
+    ++ indent (n + 1) (squareBracketize (interpolateArgs params) ++ " = " ++ appendSemicolon (tailOptimizedAssignment (last stmts))) -- print the last statement (destructuring return statement)
+    ++ indent n "}\n" -- close while loop
+    ++ indent (n - 1) "}" -- close function body
   where
     initStmts = init stmts -- all statements except the last one because we want to get rid of the return statement
 
+-- | Pretty prints a tail-optimized assignment.
 tailOptimizedAssignment :: Stmt -> String
 tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ expr)))) = 
     squareBracketize (interpolateArgs (map prettyPrintExpr expr))
 
--- | Returns a string representation of a 'Block' with no newline characters.
+-- Statements and Declarations --
+
+-- | Pretty prints a constant declaration.
+prettyPrintConstDecl :: ConstDecl -> String
+prettyPrintConstDecl (ConstDecl name expr) = 
+    appendSemicolon $ "const " ++ name ++ " = " ++ prettyPrintExpr expr
+
+-- | Pretty prints a statement.
+prettyPrintStmt :: Int -> Stmt -> String
+prettyPrintStmt n (StmtConst constDecl) = prettyPrintConstDecl constDecl
+prettyPrintStmt n (StmtIf conditional) = prettyPrintConditional n conditional
+prettyPrintStmt n (StmtFuncCall funcCall) = appendSemicolon $ prettyPrintFuncCall funcCall
+prettyPrintStmt n (StmtReturn returnStmt) = prettyPrintReturnStmt returnStmt
+prettyPrintStmt n (StmtFuncDecl funcDecl) = prettyPrintFuncDecl n funcDecl
+
+-- | Pretty prints a list of statements.
+prettyPrintStmts :: Int -> [Stmt] -> String
+prettyPrintStmts n = unlines . map (prettyPrintStmt n) -- print each statement on a new line
+
+-- | Pretty prints a return statement.
+prettyPrintReturnStmt :: ReturnStmt -> String
+prettyPrintReturnStmt (ReturnExpr expr) = appendSemicolon $ "return " ++ prettyPrintExpr expr -- print the expression
+prettyPrintReturnStmt (ReturnVal jsVal) = appendSemicolon $ "return " ++ prettyPrintJSValue jsVal -- print the JSValue
+
+-- | Pretty prints a block.
 prettyPrintBlock :: Int -> Block -> String
-prettyPrintBlock n (Block []) = curlyBracketize " "
-prettyPrintBlock n (Block [stmt]) = spaceCurlyBracketize (prettyPrintStmt n stmt)
+prettyPrintBlock n (Block []) = curlyBracketize " " -- if no statements, put a space between curly brackets
+prettyPrintBlock n (Block [stmt]) = spaceCurlyBracketize (prettyPrintStmt n stmt) -- if one statement, put it on the same line
 prettyPrintBlock n (Block stmts) = curlyBracketize ("\n" ++ indent n (prettyPrintStmts n stmts)) -- if multiple statements, put each on a new line
 
--- | Returns a string representation of a 'Block' with a space character added before the opening brace if an else block is present.
--- A helper function to add space for the if block when an else block is present
+-- | Pretty prints a block with an extra line.
 prettyPrintBlockWithExtraLine :: Int -> Block -> String
-prettyPrintBlockWithExtraLine n block = init (prettyPrintBlock n block) ++ "\n"
+prettyPrintBlockWithExtraLine n block = init (prettyPrintBlock n block) ++ "\n" -- print the block without the last curly bracket and add a new line
 
--- | Returns a string representation of a 'Conditional'.
+-- | Pretty prints a conditional.
 prettyPrintConditional :: Int -> Conditional -> String
 prettyPrintConditional n (If expr ifBlock Nothing) =
-    "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlock n ifBlock
+    "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlock n ifBlock -- print the if statement
 
 prettyPrintConditional n (If expr ifBlock (Just elseBlock)) =
-    "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " "
-    ++ prettyPrintBlockWithExtraLine n ifBlock
-    ++ "} else " ++ prettyPrintBlock n elseBlock
+    "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " " -- print the if statement
+    ++ prettyPrintBlockWithExtraLine n ifBlock -- print the if block
+    ++ "} else " ++ prettyPrintBlock n elseBlock -- print the else block
