@@ -6,9 +6,43 @@ margin: 1inch
 
 # Assignment 2: Parser and Transpiler
 
-Please do not change the names of the functions defined in the Assignment.hs file. Each Part of the assignment has corresponding `parseExerciseX` and `prettyPrintExerciseX` that will parse and pretty print the input as per the requirements in that part.
+Most parsing needs can be fulfilled by the `expr` or `stmt` parser functions as these are able to parse all sorts of expressions or statements supported by the program. Specific parsing functions can be found in Parser.hs if needed.
 
-You may (and are highly encouraged) to implement your parsers **alongside** these pre-defined functions.
+After loading src/Parser.hs into ghci, the general method to run a parser is 
+
+```
+parse <parser function> <expression to parse>
+```
+
+Examples: <br>
+
+**Expression**
+```
+parse expr "((2+2) === (3*3))"
+```
+
+Output:
+```
+Result >< Comparison (Equals (Arithmetic (Add (JsVal (JSInt 2)) (JsVal (JSInt 2)))) (Arithmetic (Mul (JsVal (JSInt 3)) (JsVal (JSInt 3)))))
+```
+
+**Statement**
+```
+parse stmt "const a = (true || true);"
+```
+
+Output:
+```
+Result >< StmtConst (ConstDecl "a" (Logical (LOr (JsVal (JSBool True)) (JsVal (JSBool True)))))
+```
+
+_multiple statements can be parsed with the `stmts` parser_
+
+To run the pretty printers, add any valid JS (that is supported by this parser) in a .js inside any folder in root/javascript/inputs
+
+In a corrresponding folder file under root/javascript/output, the pretty printed version will appear after running `stack test`
+
+Note that files under **Folder A** can only parse/pretty print Expressions. Other folders should be able to handle statements. For more description on what Statment or Expression is, check Parser.hs
 
 ## Running the Code
 
