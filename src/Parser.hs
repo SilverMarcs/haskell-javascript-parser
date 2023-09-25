@@ -657,8 +657,8 @@ shouldBeMultiLine :: String -> Bool
 shouldBeMultiLine s = length s > 42
 
 -- | Indents a string with two spaces.
-indent :: String -> String
-indent = unlines . map ("  " ++) . lines
+indent :: Int -> String -> String
+indent n = unlines . map (replicate (2*n) ' ' ++) . lines
 
 -- | Interpolates a list of arguments.
 interpolateArgs :: [String] -> String
@@ -719,25 +719,25 @@ prettyPrintLambda (LambdaExpr params expr) = parenthesize (interpolateArgs param
 prettyPrintFuncCall :: FuncCall -> String
 prettyPrintFuncCall (FuncCall name expr) = name ++ parenthesize (interpolateArgs (map prettyPrintExpr expr))
 
-prettyPrintFuncDeclCommon :: String -> [String] -> String -> String
-prettyPrintFuncDeclCommon name args blockContent = "function " ++ name ++ parenthesize (interpolateArgs args) ++ " " ++ blockContent
+prettyPrintFuncDeclCommon :: Int -> String -> [String] -> String -> String
+prettyPrintFuncDeclCommon n name args blockContent = "function " ++ name ++ parenthesize (interpolateArgs args) ++ " " ++ blockContent
 
-prettyPrintFuncDecl :: FuncDecl -> String
-prettyPrintFuncDecl (TailRecursiveFunc name args block) = prettyPrintFuncDeclCommon name args (prettyPrintTailOptimizedBlock name args block)
-prettyPrintFuncDecl (NonTailRecursiveFunc name args block) = prettyPrintFuncDeclCommon name args (prettyPrintBlock block)
+prettyPrintFuncDecl :: Int -> FuncDecl -> String
+prettyPrintFuncDecl n (TailRecursiveFunc name args block) = prettyPrintFuncDeclCommon n name args (prettyPrintTailOptimizedBlock n name args block)
+prettyPrintFuncDecl n (NonTailRecursiveFunc name args block) = prettyPrintFuncDeclCommon n name args (prettyPrintBlock n block)
 
 prettyPrintConstDecl :: ConstDecl -> String
 prettyPrintConstDecl (ConstDecl name expr) = appendSemicolon $ "const " ++ name ++ " = " ++ prettyPrintExpr expr
 
-prettyPrintStmt :: Stmt -> String
-prettyPrintStmt (StmtConst constDecl) = prettyPrintConstDecl constDecl
-prettyPrintStmt (StmtIf conditional) = prettyPrintConditional conditional
-prettyPrintStmt (StmtFuncCall funcCall) = appendSemicolon $ prettyPrintFuncCall funcCall  -- print semi colon only when function call is done standalone
-prettyPrintStmt (StmtReturn returnStmt) = prettyPrintReturnStmt returnStmt
-prettyPrintStmt (StmtFuncDecl funcDecl) = prettyPrintFuncDecl funcDecl
+prettyPrintStmt :: Int -> Stmt -> String
+prettyPrintStmt n (StmtConst constDecl) = prettyPrintConstDecl constDecl
+prettyPrintStmt n (StmtIf conditional) = prettyPrintConditional n conditional
+prettyPrintStmt n (StmtFuncCall funcCall) = appendSemicolon $ prettyPrintFuncCall funcCall
+prettyPrintStmt n (StmtReturn returnStmt) = prettyPrintReturnStmt returnStmt
+prettyPrintStmt n (StmtFuncDecl funcDecl) = prettyPrintFuncDecl n funcDecl
 
-prettyPrintStmts :: [Stmt] -> String
-prettyPrintStmts = unlines . map prettyPrintStmt
+prettyPrintStmts :: Int -> [Stmt] -> String
+prettyPrintStmts n = unlines . map (prettyPrintStmt n)
 
 prettyPrintReturnStmt :: ReturnStmt -> String
 prettyPrintReturnStmt (ReturnExpr expr) = appendSemicolon $ "return " ++ prettyPrintExpr expr
@@ -761,48 +761,47 @@ formatTernary conditionStr trueBranchStr falseBranchStr =
 prettyPrintTernary :: TernaryExpr -> String
 prettyPrintTernary (Ternary condition trueBranch falseBranch) =
     parenthesize $
-    formatTernary (prettyPrintExpr condition) 
-                  (prettyPrintExpr trueBranch) 
+    formatTernary (prettyPrintExpr condition)
+                  (prettyPrintExpr trueBranch)
                   (prettyPrintExpr falseBranch)
 
 
-prettyPrintTailOptimizedBlock :: String -> [String] -> Block -> String
-prettyPrintTailOptimizedBlock fname params (Block stmts) =
-  "{\n  while (true) {\n"
-    ++ (indent . init . prettyPrintStmts $ initStmts)
-    ++ "    ["
-    ++ intercalate ", " params
-    ++ "] = "
-    ++ tailOptimizedAssignment (last stmts)
-    ++ ";\n  }\n}"
+prettyPrintTailOptimizedBlock :: Int -> String -> [String] -> Block -> String
+prettyPrintTailOptimizedBlock n fname params (Block stmts) =
+  "{\n"
+    ++ indent n "while (true) {\n"
+    ++ indent (n+1) (init (prettyPrintStmts (n+1) initStmts))
+    ++ indent (n+1) ("[" ++ intercalate ", " params ++ "] = " ++ tailOptimizedAssignment (last stmts) ++ ";")
+    ++ indent n "}\n"
+  ++ indent (n-1) "}"
   where
-    initStmts = init stmts -- All statements except the last one
-    indent = unlines . map ("    " ++) . lines -- Four spaces for indenting
+    initStmts = init stmts -- all statements except the last one because we want to get rid of the return statement
 
 tailOptimizedAssignment :: Stmt -> String
 tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ expr)))) = squareBracketize (interpolateArgs (map prettyPrintExpr expr))
 
 
 -- | Returns a string representation of a 'Block' with no newline characters.
-prettyPrintBlock :: Block -> String
-prettyPrintBlock (Block []) = curlyBracketize " " 
-prettyPrintBlock (Block [stmt]) = spaceCurlyBracketize (prettyPrintStmt stmt)  -- if only one statement, don't put it on a new line
-prettyPrintBlock (Block stmts) = curlyBracketize ("\n" ++ indent (prettyPrintStmts stmts))   -- if multiple statements, put each on a new line
+prettyPrintBlock :: Int -> Block -> String
+prettyPrintBlock n (Block []) = curlyBracketize " "
+prettyPrintBlock n (Block [stmt]) = spaceCurlyBracketize (prettyPrintStmt n stmt)
+prettyPrintBlock n (Block stmts) = curlyBracketize ("\n" ++ indent n (prettyPrintStmts n stmts)) -- if multiple statements, put each on a new line
 
 
 -- | Returns a string representation of a 'Block' with a space character added before the opening brace if an else block is present.
 -- A helper function to add space for the if block when an else block is present
-prettyPrintBlockWithExtraLine :: Block -> String
-prettyPrintBlockWithExtraLine block = init (prettyPrintBlock block) ++ "\n"
-  
+prettyPrintBlockWithExtraLine :: Int -> Block -> String
+prettyPrintBlockWithExtraLine n block = init (prettyPrintBlock n block) ++ "\n"
+
+
 -- | Returns a string representation of a 'Conditional'.
-prettyPrintConditional :: Conditional -> String
-prettyPrintConditional (If expr ifBlock Nothing) =
-  "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlock ifBlock
-prettyPrintConditional (If expr ifBlock (Just elseBlock)) =
+prettyPrintConditional :: Int -> Conditional -> String
+prettyPrintConditional n (If expr ifBlock Nothing) =
+  "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlock n ifBlock
+prettyPrintConditional n (If expr ifBlock (Just elseBlock)) =
   "if "
     ++ spaceParenthesize (prettyPrintExpr expr)
     ++ " "
-    ++ prettyPrintBlockWithExtraLine ifBlock
+    ++ prettyPrintBlockWithExtraLine n ifBlock
     ++ "} else "
-    ++ prettyPrintBlock elseBlock
+    ++ prettyPrintBlock n elseBlock

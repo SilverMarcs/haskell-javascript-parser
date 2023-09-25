@@ -30,8 +30,8 @@ parseExerciseB =
     <|> StatementValues <$> stmts
 
 prettyPrintExerciseB :: ADT -> String
-prettyPrintExerciseB (StatementValues stmts) = prettyPrintStmts stmts
-prettyPrintExerciseB (BlockValue blk) = prettyPrintBlock blk
+prettyPrintExerciseB (StatementValues stmts) = prettyPrintStmts 1 stmts
+prettyPrintExerciseB (BlockValue blk) = prettyPrintBlock 1 blk
 
 -- | Exercise C
 
@@ -46,7 +46,7 @@ parseExerciseC :: Parser ADT
 parseExerciseC = StatementValues <$> stmts
 
 prettyPrintExerciseC :: ADT -> String
-prettyPrintExerciseC (StatementValues stmts) = prettyPrintStmts stmts
+prettyPrintExerciseC (StatementValues stmts) = prettyPrintStmts 1 stmts
 
 
 -------  Extra Bonus section  -------
@@ -65,4 +65,4 @@ parseExerciseE :: Parser ADT
 parseExerciseE = StatementValues <$> stmts
 
 prettyPrintExerciseE :: ADT -> String
-prettyPrintExerciseE (StatementValues stmts) = prettyPrintStmts stmts
+prettyPrintExerciseE (StatementValues stmts) = prettyPrintStmts 1 stmts

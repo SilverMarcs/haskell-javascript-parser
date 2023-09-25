@@ -4,3 +4,4 @@ function factorial(n, acc) {
     [n, acc] = [(n - 1), (acc * n)];
   }
 }
+
