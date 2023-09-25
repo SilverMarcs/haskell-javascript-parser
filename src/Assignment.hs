@@ -31,7 +31,6 @@ prettyPrintExerciseB (StatementValues stmts) = prettyPrintStmts 1 stmts
 
 
 -- | Exercise C
-
 -- This function should determine if the given code is a tail recursive function
 isTailRecursive :: String -> Bool
 isTailRecursive funcStr =
@@ -48,16 +47,16 @@ prettyPrintExerciseC (StatementValues stmts) = prettyPrintStmts 1 stmts
 
 -------  Extra Bonus section  -------
 
--- | Evaluates, parses and pretty prints simple arithmatic, logical and comparison expressions
--- check out the test cases and results in javascript/inputs/D and javascript/output/D
+-- | Evaluates, parses and pretty prints simple arithmatic, logical and comparison expressions. Check out the test cases and results in javascript/inputs/D and javascript/output/D
+-- | Exercise D
 parseExerciseD :: Parser ADT
 parseExerciseD = ExprValue . JsVal <$> evalUnifiedExpr
 
 prettyPrintExerciseD :: ADT -> String
 prettyPrintExerciseD (ExprValue (JsVal v)) = prettyPrintJSValue v
 
--- | Parses and pretty prints lambda const declarations
--- check out the test cases and results in javascript/inputs/E and javascript/output/E
+-- | Parses and pretty prints lambda const declarations. Check out the test cases and results in javascript/inputs/E and javascript/output/E
+-- | Exercise E
 parseExerciseE :: Parser ADT
 parseExerciseE = StatementValues <$> stmts
 
