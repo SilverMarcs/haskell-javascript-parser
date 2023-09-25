@@ -231,7 +231,7 @@ input:checked+.slider:before {
   border-width: 2px;
   padding: 5px;
   width: 500;
-  /* this was added by me to see the prettyprinted output better */
+  /* this was added by student to see the prettyprinted output better as the default size was moving some of the outptu to the next line*/
 }
 
 embed {

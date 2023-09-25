@@ -47,3 +47,12 @@ parseExerciseC = StatementValues <$> stmts
 
 prettyPrintExerciseC :: ADT -> String
 prettyPrintExerciseC (StatementValues stmts) = prettyPrintStmts stmts
+
+
+-- | Extra Bonus section that parses and evaluates simple arithmatic, logical and comparison expressions
+-- check out the test cases and results in javascript/inputs/D and javascript/output/D
+parseExerciseD :: Parser ADT
+parseExerciseD = ExprValue . JsVal <$> evalUnifiedExpr
+
+prettyPrintExerciseD :: ADT -> String
+prettyPrintExerciseD (ExprValue (JsVal v)) = prettyPrintJSValue v

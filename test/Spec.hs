@@ -23,6 +23,7 @@ chooseParser :: Char -> (Parser ADT, ADT -> String)
 chooseParser 'A' = (parseExerciseA, prettyPrintExerciseA)
 chooseParser 'B' = (parseExerciseB, prettyPrintExerciseB)
 chooseParser 'C' = (parseExerciseC, prettyPrintExerciseC)
+chooseParser 'D' = (parseExerciseD, prettyPrintExerciseD)  -- added by student
 chooseParser _ = undefined
 
 -- https://stackoverflow.com/questions/4503958/what-is-the-best-way-to-split-a-string-by-a-delimiter-functionally
