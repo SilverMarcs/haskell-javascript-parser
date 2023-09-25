@@ -267,6 +267,19 @@ jsBoolValue = LBool <$> (roundBracketed jsBool <|> jsBool)
 logicExpr :: Parser LogicExpr
 logicExpr = roundBracketed (logicNot <|> logicAnd <|> logicOr <|> jsBoolValue)
 
+evalLogic :: LogicExpr -> Maybe JSValue
+evalLogic (LAnd e1 e2) = liftA2 land (eval e1) (eval e2) where land (JSBool a) (JSBool b) = JSBool (a && b)
+evalLogic (LOr e1 e2)  = liftA2 lor (eval e1) (eval e2) where lor  (JSBool a) (JSBool b) = JSBool (a || b)
+evalLogic (LNot e)     = fmap lnot (eval e)     where lnot (JSBool a) = JSBool (not a)
+evalLogic (LBool b)    = Just b
+
+evalLogicExpr :: Parser JSValue
+evalLogicExpr = do
+    e <- logicExpr
+    case eval (Logical e) of
+        Just v  -> return v
+        Nothing -> failed (UnexpectedString "Failed to evaluate logic expression.")
+
 -- | ----------------------------
 -- | -- Arithmetic Expressions --
 -- | ----------------------------
@@ -296,6 +309,20 @@ powOp = binaryOp "**" Pow
 arithExpr :: Parser ArithExpr
 arithExpr = roundBracketed (addOp <|> subOp <|> mulOp <|> divOp <|> powOp)
 
+evalArith :: ArithExpr -> Maybe JSValue
+evalArith (Add e1 e2) = liftA2 add (eval e1) (eval e2) where add (JSInt a) (JSInt b) = JSInt (a + b)
+evalArith (Sub e1 e2) = liftA2 sub (eval e1) (eval e2) where sub (JSInt a) (JSInt b) = JSInt (a - b)
+evalArith (Mul e1 e2) = liftA2 mul (eval e1) (eval e2) where mul (JSInt a) (JSInt b) = JSInt (a * b)
+evalArith (Div e1 e2) = liftA2 divi (eval e1) (eval e2) where divi (JSInt a) (JSInt b) = JSInt (a `div` b)
+evalArith (Pow e1 e2) = liftA2 pow (eval e1) (eval e2) where pow (JSInt a) (JSInt b) = JSInt (a ^ b)
+
+evalArithExpr :: Parser JSValue
+evalArithExpr = do
+    e <- arithExpr
+    case eval (Arithmetic e) of
+        Just v  -> return v
+        Nothing -> failed (UnexpectedString "Failed to evaluate arithmetic expression.")
+        
 -- | ----------------------------
 -- | -- Comparison Expressions --
 -- | ----------------------------
@@ -321,6 +348,19 @@ lessThanOp = binaryOp "<" LessThan
 compareExpr :: Parser CompareExpr
 compareExpr = roundBracketed (equalsOp <|> notEqualsOp <|> greaterThanOp <|> lessThanOp)
 
+evalCompare :: CompareExpr -> Maybe JSValue
+evalCompare (Equals e1 e2)       = liftA2 eq (eval e1) (eval e2) where eq a b = JSBool (a == b)
+evalCompare (NotEquals e1 e2)    = liftA2 neq (eval e1) (eval e2) where neq a b = JSBool (a /= b)
+evalCompare (GreaterThan e1 e2)  = liftA2 gt (eval e1) (eval e2) where gt (JSInt a) (JSInt b) = JSBool (a > b)
+evalCompare (LessThan e1 e2)     = liftA2 lt (eval e1) (eval e2) where lt (JSInt a) (JSInt b) = JSBool (a < b)
+
+evalCompareExpr :: Parser JSValue
+evalCompareExpr = do
+    e <- compareExpr
+    case eval (Comparison e) of
+        Just v  -> return v
+        Nothing -> failed (UnexpectedString "Failed to evaluate comparison expression.")
+
 -- | -------------------------
 -- | -- Ternary Expressions --
 -- | -------------------------
@@ -338,8 +378,9 @@ ternaryExpr =
       <* charTok ':'
       <*> expr
 
--- General Expression --
-
+-- | -------------------------
+-- | --- Unified Expression --
+-- | -------------------------
 data Expr
   = FuncCallExpr FuncCall
   | JsVal JSValue
@@ -357,6 +398,23 @@ expr =
     <|> Logical <$> logicExpr
     <|> Comparison <$> compareExpr
     <|> TernaryOp <$> ternaryExpr
+
+
+-- | -------------------------
+-- | -- Evaluate Expression --
+-- | -------------------------
+eval :: Expr -> Maybe JSValue
+eval (JsVal v)          = Just v
+eval (Arithmetic e)     = evalArith e
+eval (Logical e)        = evalLogic e
+eval (Comparison e)     = evalCompare e
+
+evalUnifiedExpr :: Parser JSValue
+evalUnifiedExpr =
+    evalArithExpr
+    <|> evalLogicExpr
+    <|> evalCompareExpr
+
 
 -- | ------------------------
 -- | -- Const declaration ---
