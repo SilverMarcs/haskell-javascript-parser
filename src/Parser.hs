@@ -650,6 +650,14 @@ shouldBeMultiLine s = length s > 42
 indent :: String -> String
 indent = unlines . map ("  " ++) . lines
 
+-- | Interpolates a list of arguments.
+interpolateArgs :: [String] -> String
+interpolateArgs = intercalate ", "
+
+-- | Adds a semicolon to the end of a string.
+appendSemicolon :: String -> String
+appendSemicolon s = s ++ ";"
+
 -- | Helper function for pretty printing binary operations.
 binaryOpPrettyPrint :: String -> Expr -> Expr -> String
 binaryOpPrettyPrint op a b = parenthesize $ prettyPrintExpr a ++ " " ++ op ++ " " ++ prettyPrintExpr b
@@ -667,7 +675,7 @@ prettyPrintLogic :: LogicExpr -> String
 prettyPrintLogic (LAnd a b) = binaryOpPrettyPrint "&&" a b
 prettyPrintLogic (LOr a b) = binaryOpPrettyPrint "||" a b
 prettyPrintLogic (LNot a) = parenthesize $ "!" ++ prettyPrintExpr a
-prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v
+prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v  -- one of the test inputs have braces around signle boolean, so i parenthsized it
 
 -- | Pretty prints a comparison expression.
 prettyPrintComp :: CompareExpr -> String
@@ -694,67 +702,59 @@ prettyPrintExpr (TernaryOp t) = prettyPrintTernary t
 prettyPrintExpr (FuncCallExpr f) = prettyPrintFuncCall f
 prettyPrintExpr (LambdaFunc l) = prettyPrintLambda l
 
--- | Pretty prints a lambda expression.
+-- Pretty Printers
 prettyPrintLambda :: LambdaExpr -> String
-prettyPrintLambda (LambdaExpr params expr) =
-  parenthesize (intercalate ", " params)
-      ++ " => "
-      ++ prettyPrintExpr expr
+prettyPrintLambda (LambdaExpr params expr) = parenthesize (interpolateArgs params) ++ " => " ++ prettyPrintExpr expr
 
-
--- Pretty print for TernaryExpr
-prettyPrintTernary :: TernaryExpr -> String
-prettyPrintTernary (Ternary condition trueBranch falseBranch) =
-  let conditionStr = prettyPrintExpr condition
-      trueBranchStr = prettyPrintExpr trueBranch
-      falseBranchStr = prettyPrintExpr falseBranch
-      totalLength = length conditionStr + length trueBranchStr + length falseBranchStr
-
-      delimiter
-        | totalLength > 42 = "\n"
-        | otherwise = " "
-   in parenthesize $
-        conditionStr
-          ++ delimiter
-          ++ "? "
-          ++ trueBranchStr
-          ++ delimiter
-          ++ ": "
-          ++ falseBranchStr
-
--- Pretty print for FuncCall
 prettyPrintFuncCall :: FuncCall -> String
-prettyPrintFuncCall (FuncCall name expr) =
-  name ++ "(" ++ intercalate ", " (map prettyPrintExpr expr) ++ ")"
+prettyPrintFuncCall (FuncCall name expr) = name ++ parenthesize (interpolateArgs (map prettyPrintExpr expr))
 
--- pretty print a single ConstDecl
+prettyPrintFuncDeclCommon :: String -> [String] -> String -> String
+prettyPrintFuncDeclCommon name args blockContent = "function " ++ name ++ parenthesize (interpolateArgs args) ++ " " ++ blockContent
+
+prettyPrintFuncDecl :: FuncDecl -> String
+prettyPrintFuncDecl (TailRecursiveFunc name args block) = prettyPrintFuncDeclCommon name args (prettyPrintTailOptimizedBlock name args block)
+prettyPrintFuncDecl (NonTailRecursiveFunc name args block) = prettyPrintFuncDeclCommon name args (prettyPrintBlock block)
+
 prettyPrintConstDecl :: ConstDecl -> String
-prettyPrintConstDecl (ConstDecl name expr) =
-  "const " ++ name ++ " = " ++ prettyPrintExpr expr ++ ";"
+prettyPrintConstDecl (ConstDecl name expr) = appendSemicolon $ "const " ++ name ++ " = " ++ prettyPrintExpr expr
 
--- | Converts a 'Stmt' to a 'String' representation.
 prettyPrintStmt :: Stmt -> String
 prettyPrintStmt (StmtConst constDecl) = prettyPrintConstDecl constDecl
 prettyPrintStmt (StmtIf conditional) = prettyPrintConditional conditional
-prettyPrintStmt (StmtFuncCall funcCall) = prettyPrintFuncCall funcCall ++ ";"
+prettyPrintStmt (StmtFuncCall funcCall) = appendSemicolon $ prettyPrintFuncCall funcCall  -- print semi colon only when function call is done standalone
 prettyPrintStmt (StmtReturn returnStmt) = prettyPrintReturnStmt returnStmt
 prettyPrintStmt (StmtFuncDecl funcDecl) = prettyPrintFuncDecl funcDecl
 
--- | Converts a list of 'Stmt's to a 'String' representation.
 prettyPrintStmts :: [Stmt] -> String
 prettyPrintStmts = unlines . map prettyPrintStmt
 
--- | Converts a 'ReturnStmt' to a 'String' representation.
 prettyPrintReturnStmt :: ReturnStmt -> String
-prettyPrintReturnStmt (ReturnExpr expr) = "return " ++ prettyPrintExpr expr ++ ";"
-prettyPrintReturnStmt (ReturnVal jsVal) = "return " ++ prettyPrintJSValue jsVal ++ ";"
+prettyPrintReturnStmt (ReturnExpr expr) = appendSemicolon $ "return " ++ prettyPrintExpr expr
+prettyPrintReturnStmt (ReturnVal jsVal) = appendSemicolon $ "return " ++ prettyPrintJSValue jsVal
 
--- | Converts a 'FuncDecl' to a 'String' representation.
-prettyPrintFuncDecl :: FuncDecl -> String
-prettyPrintFuncDecl (TailRecursiveFunc name args block) =
-  "function " ++ name ++ "(" ++ intercalate ", " args ++ ") " ++ prettyPrintTailOptimizedBlock name args block
-prettyPrintFuncDecl (NonTailRecursiveFunc name args block) =
-  "function " ++ name ++ "(" ++ intercalate ", " args ++ ") " ++ prettyPrintBlock block 
+
+-- | Formats the Ternary Expression
+formatTernary :: String -> String -> String -> String
+formatTernary conditionStr trueBranchStr falseBranchStr =
+    let combinedStr = conditionStr ++ "? " ++ trueBranchStr ++ ": " ++ falseBranchStr
+        delimiter = if shouldBeMultiLine combinedStr then "\n" else " "
+    in  conditionStr
+        ++ delimiter
+        ++ "? "
+        ++ trueBranchStr
+        ++ delimiter
+        ++ ": "
+        ++ falseBranchStr
+
+-- | Pretty print for TernaryExpr
+prettyPrintTernary :: TernaryExpr -> String
+prettyPrintTernary (Ternary condition trueBranch falseBranch) =
+    parenthesize $
+    formatTernary (prettyPrintExpr condition) 
+                  (prettyPrintExpr trueBranch) 
+                  (prettyPrintExpr falseBranch)
+
 
 prettyPrintTailOptimizedBlock :: String -> [String] -> Block -> String
 prettyPrintTailOptimizedBlock fname params (Block stmts) =
