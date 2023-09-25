@@ -589,6 +589,7 @@ data Stmt
   | StmtFuncCall FuncCall
   | StmtReturn ReturnStmt
   | StmtFuncDecl FuncDecl
+  | StmtBlock Block
   deriving (Eq, Show)
 
 -- | Parses a single statement.
@@ -599,6 +600,7 @@ stmt =
     <|> StmtReturn <$> returnStmt
     <|> (StmtFuncCall <$> funcCall <* charTok ';') -- because funcCall part of an expression or appear as a statement, we only consume semi colon if it is a statement
     <|> StmtFuncDecl <$> funcDecl
+    <|> StmtBlock <$> block
 
 -- | Parses a list of statements.
 stmts :: Parser [Stmt]
@@ -787,8 +789,10 @@ prettyPrintStmt n (StmtIf conditional) = prettyPrintConditional n conditional
 prettyPrintStmt n (StmtFuncCall funcCall) = appendSemicolon $ prettyPrintFuncCall funcCall
 prettyPrintStmt n (StmtReturn returnStmt) = prettyPrintReturnStmt returnStmt
 prettyPrintStmt n (StmtFuncDecl funcDecl) = prettyPrintFuncDecl n funcDecl
+prettyPrintStmt n (StmtBlock block) = prettyPrintBlock n block  -- added this line to handle nested blocks
 
 -- | Pretty prints a list of statements.
+
 prettyPrintStmts :: Int -> [Stmt] -> String
 prettyPrintStmts n = unlines . map (prettyPrintStmt n) -- print each statement on a new line
 

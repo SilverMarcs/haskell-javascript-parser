@@ -12,7 +12,6 @@ import Parser
 
 data ADT
   = ExprValue Expr
-  | BlockValue Block
   | StatementValues [Stmt]
   deriving (Eq, Show)
 
@@ -25,13 +24,11 @@ prettyPrintExerciseA (ExprValue e) = prettyPrintExpr e
 
 -- | Exercise B
 parseExerciseB :: Parser ADT
-parseExerciseB =
-  BlockValue <$> block
-    <|> StatementValues <$> stmts
+parseExerciseB = StatementValues <$> stmts
 
 prettyPrintExerciseB :: ADT -> String
 prettyPrintExerciseB (StatementValues stmts) = prettyPrintStmts 1 stmts
-prettyPrintExerciseB (BlockValue blk) = prettyPrintBlock 1 blk
+
 
 -- | Exercise C
 
