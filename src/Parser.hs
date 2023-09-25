@@ -618,7 +618,7 @@ parseFunction str =
 -- | ----- Preety Print -----
 -- | ------------------------
 
--- pretty printing helper funcstion --
+-- pretty printing helper functions --
 
 -- | Wraps a string with the given start and end characters.
 wrapWith :: String -> String -> String -> String
@@ -704,20 +704,30 @@ prettyPrintExpr (LambdaFunc l) = prettyPrintLambda l
 
 -- Pretty Printers
 prettyPrintLambda :: LambdaExpr -> String
-prettyPrintLambda (LambdaExpr params expr) = parenthesize (interpolateArgs params) ++ " => " ++ prettyPrintExpr expr
+prettyPrintLambda (LambdaExpr params expr) = 
+    parenthesize (interpolateArgs params) ++ " => " ++ prettyPrintExpr expr
 
 prettyPrintFuncCall :: FuncCall -> String
-prettyPrintFuncCall (FuncCall name expr) = name ++ parenthesize (interpolateArgs (map prettyPrintExpr expr))
+prettyPrintFuncCall (FuncCall name expr) = 
+    name ++ parenthesize (interpolateArgs (map prettyPrintExpr expr))
 
 prettyPrintFuncDeclCommon :: Int -> String -> [String] -> String -> String
-prettyPrintFuncDeclCommon n name args blockContent = "function " ++ name ++ parenthesize (interpolateArgs args) ++ " " ++ blockContent
+prettyPrintFuncDeclCommon n name args blockContent = 
+    "function " ++ name 
+    ++ parenthesize (interpolateArgs args) 
+    ++ " " 
+    ++ blockContent
 
 prettyPrintFuncDecl :: Int -> FuncDecl -> String
-prettyPrintFuncDecl n (TailRecursiveFunc name args block) = prettyPrintFuncDeclCommon n name args (prettyPrintTailOptimizedBlock n name args block)
-prettyPrintFuncDecl n (NonTailRecursiveFunc name args block) = prettyPrintFuncDeclCommon n name args (prettyPrintBlock n block)
+prettyPrintFuncDecl n (TailRecursiveFunc name args block) =
+    prettyPrintFuncDeclCommon n name args (prettyPrintTailOptimizedBlock n name args block)
+
+prettyPrintFuncDecl n (NonTailRecursiveFunc name args block) = 
+    prettyPrintFuncDeclCommon n name args (prettyPrintBlock n block)
 
 prettyPrintConstDecl :: ConstDecl -> String
-prettyPrintConstDecl (ConstDecl name expr) = appendSemicolon $ "const " ++ name ++ " = " ++ prettyPrintExpr expr
+prettyPrintConstDecl (ConstDecl name expr) = 
+    appendSemicolon $ "const " ++ name ++ " = " ++ prettyPrintExpr expr
 
 prettyPrintStmt :: Int -> Stmt -> String
 prettyPrintStmt n (StmtConst constDecl) = prettyPrintConstDecl constDecl
@@ -757,8 +767,8 @@ prettyPrintTernary (Ternary condition trueBranch falseBranch) =
 
 prettyPrintTailOptimizedBlock :: Int -> String -> [String] -> Block -> String
 prettyPrintTailOptimizedBlock n fname params (Block stmts) =
-  "{\n"
-    ++ indent n "while (true) {\n"
+    "{\n"
+    ++ indent n "while ( true ) {\n"
     ++ indent (n + 1) (init (prettyPrintStmts (n + 1) initStmts))
     ++ indent (n + 1) (squareBracketize (interpolateArgs params) ++ " = " ++ appendSemicolon (tailOptimizedAssignment (last stmts)))
     ++ indent n "}\n"
@@ -767,7 +777,8 @@ prettyPrintTailOptimizedBlock n fname params (Block stmts) =
     initStmts = init stmts -- all statements except the last one because we want to get rid of the return statement
 
 tailOptimizedAssignment :: Stmt -> String
-tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ expr)))) = squareBracketize (interpolateArgs (map prettyPrintExpr expr))
+tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ expr)))) = 
+    squareBracketize (interpolateArgs (map prettyPrintExpr expr))
 
 -- | Returns a string representation of a 'Block' with no newline characters.
 prettyPrintBlock :: Int -> Block -> String
@@ -783,11 +794,9 @@ prettyPrintBlockWithExtraLine n block = init (prettyPrintBlock n block) ++ "\n"
 -- | Returns a string representation of a 'Conditional'.
 prettyPrintConditional :: Int -> Conditional -> String
 prettyPrintConditional n (If expr ifBlock Nothing) =
-  "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlock n ifBlock
+    "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " " ++ prettyPrintBlock n ifBlock
+
 prettyPrintConditional n (If expr ifBlock (Just elseBlock)) =
-  "if "
-    ++ spaceParenthesize (prettyPrintExpr expr)
-    ++ " "
+    "if " ++ spaceParenthesize (prettyPrintExpr expr) ++ " "
     ++ prettyPrintBlockWithExtraLine n ifBlock
-    ++ "} else "
-    ++ prettyPrintBlock n elseBlock
+    ++ "} else " ++ prettyPrintBlock n elseBlock
