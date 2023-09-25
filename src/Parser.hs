@@ -255,7 +255,7 @@ jsValue = jsInt <|> jsString <|> jsBool <|> jsVar <|> jsList
 binaryOp :: String -> (Expr -> Expr -> a) -> Parser a
 binaryOp op constructor = do
   lhs <- expr -- parse the left hand side of the expression
-  stringTok op  -- parse the operator
+  stringTok op -- parse the operator
   constructor lhs <$> expr -- parse the right hand side of the expression
 
 -- | Parses a unary operation of an expression
@@ -396,13 +396,12 @@ evalCompare (LessThan e1 e2)     = liftA2 lt (eval e1) (eval e2) where lt (JSInt
 evalCompareExpr :: Parser JSValue
 evalCompareExpr = evalExpr compareExpr evalCompare
 
-
 -- | -------------------------
 -- | -- Ternary Expressions --
 -- | -------------------------
 -- | Represents a ternary expression in the form of `condition ? trueValue : falseValue`.
 data TernaryExpr
-  = Ternary Expr Expr Expr -- ^ The three expressions that make up the ternary expression.
+  = Ternary Expr Expr Expr
   deriving (Eq, Show)
 
 -- | Parses a ternary expression.
@@ -441,7 +440,6 @@ expr =
     <|> TernaryOp <$> ternaryExpr
     <|> LambdaFunc <$> lambdaExpr
 
-
 -- | -------------------------
 -- | -- Evaluate Expression --
 -- | -------------------------
@@ -458,9 +456,8 @@ eval _                  = Nothing
 evalUnifiedExpr :: Parser JSValue
 evalUnifiedExpr =
   evalArithExpr
-  <|> evalLogicExpr
-  <|> evalCompareExpr
-
+    <|> evalLogicExpr
+    <|> evalCompareExpr
 
 -- | 'evalExpr' is a higher-order function that takes a parser 'p' and an evaluator function 'evaluator'.
 -- It parses an expression using the parser 'p' and then evaluates it using the evaluator function 'evaluator'.
@@ -470,10 +467,8 @@ evalExpr :: Parser a -> (a -> Maybe JSValue) -> Parser JSValue
 evalExpr p evaluator = do
   e <- p
   case evaluator e of
-    Just v  -> return v
+    Just v -> return v
     Nothing -> failed (UnexpectedString "Failed to evaluate expression.")
-
-
 
 -- | ------------------------
 -- | -- Const declaration ---
@@ -485,7 +480,6 @@ data ConstDecl = ConstDecl String Expr deriving (Eq, Show)
 -- | Parses a constant declaration, which starts with the keyword "const", followed by a variable name, an equals sign, and an expression.
 constDecl :: Parser ConstDecl
 constDecl = endWithSemicolon $ ConstDecl <$> (constToken *> tok varName <* charTok '=') <*> expr
-
 
 -- | ------------------------
 -- | ---- Conditionals ------
@@ -502,7 +496,6 @@ conditional =
     <*> block -- Parses the "then" block
     <*> optional (elseToken *> block) -- Parses the optional "else" block
 
-
 -- | ------------------------
 -- | ------- Blocks ---------
 -- | ------------------------
@@ -512,7 +505,6 @@ newtype Block = Block [Stmt] deriving (Eq, Show)
 -- | Parses a block of statements, which starts with an opening curly bracket, followed by zero or more statements, and ends with a closing curly bracket.
 block :: Parser Block
 block = Block <$> (charTok '{' *> stmts <* charTok '}')
-
 
 -- | ------------------------
 -- | ---- Lambda Funcs- -----
@@ -524,10 +516,9 @@ data LambdaExpr = LambdaExpr [String] Expr deriving (Eq, Show)
 -- | Parses a lambda expression.
 lambdaExpr :: Parser LambdaExpr
 lambdaExpr = do
-    params <- roundBracketed (commaSeparated varName)
-    l <- lambdaToken
-    LambdaExpr params <$> expr
-
+  params <- roundBracketed (commaSeparated varName)
+  l <- lambdaToken
+  LambdaExpr params <$> expr
 
 -- | ------------------------
 -- | ---- Functions -----
@@ -623,7 +614,6 @@ parseFunction str =
     Result _ (NonTailRecursiveFunc fname params body) -> Just (fname, params, body)
     _ -> Nothing
 
-
 -- | ------------------------
 -- | ----- Preety Print -----
 -- | ------------------------
@@ -658,7 +648,7 @@ shouldBeMultiLine s = length s > 42
 
 -- | Indents a string with two spaces.
 indent :: Int -> String -> String
-indent n = unlines . map (replicate (2*n) ' ' ++) . lines
+indent n = unlines . map (replicate (2 * n) ' ' ++) . lines
 
 -- | Interpolates a list of arguments.
 interpolateArgs :: [String] -> String
@@ -685,7 +675,7 @@ prettyPrintLogic :: LogicExpr -> String
 prettyPrintLogic (LAnd a b) = binaryOpPrettyPrint "&&" a b
 prettyPrintLogic (LOr a b) = binaryOpPrettyPrint "||" a b
 prettyPrintLogic (LNot a) = parenthesize $ "!" ++ prettyPrintExpr a
-prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v  -- one of the test inputs have braces around single boolean, so i parenthsized it
+prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v -- one of the test inputs have braces around single boolean, so i parenthsized it
 
 -- | Pretty prints a comparison expression.
 prettyPrintComp :: CompareExpr -> String
@@ -743,13 +733,12 @@ prettyPrintReturnStmt :: ReturnStmt -> String
 prettyPrintReturnStmt (ReturnExpr expr) = appendSemicolon $ "return " ++ prettyPrintExpr expr
 prettyPrintReturnStmt (ReturnVal jsVal) = appendSemicolon $ "return " ++ prettyPrintJSValue jsVal
 
-
 -- | Formats the Ternary Expression
 formatTernary :: String -> String -> String -> String
 formatTernary conditionStr trueBranchStr falseBranchStr =
-    let combinedStr = conditionStr ++ "? " ++ trueBranchStr ++ ": " ++ falseBranchStr
-        delimiter = if shouldBeMultiLine combinedStr then "\n" else " "
-    in  conditionStr
+  let combinedStr = conditionStr ++ "? " ++ trueBranchStr ++ ": " ++ falseBranchStr
+      delimiter = if shouldBeMultiLine combinedStr then "\n" else " "
+   in conditionStr
         ++ delimiter
         ++ "? "
         ++ trueBranchStr
@@ -760,26 +749,25 @@ formatTernary conditionStr trueBranchStr falseBranchStr =
 -- | Pretty print for TernaryExpr
 prettyPrintTernary :: TernaryExpr -> String
 prettyPrintTernary (Ternary condition trueBranch falseBranch) =
-    parenthesize $
-    formatTernary (prettyPrintExpr condition)
-                  (prettyPrintExpr trueBranch)
-                  (prettyPrintExpr falseBranch)
-
+  parenthesize $
+    formatTernary
+      (prettyPrintExpr condition)
+      (prettyPrintExpr trueBranch)
+      (prettyPrintExpr falseBranch)
 
 prettyPrintTailOptimizedBlock :: Int -> String -> [String] -> Block -> String
 prettyPrintTailOptimizedBlock n fname params (Block stmts) =
   "{\n"
     ++ indent n "while (true) {\n"
-    ++ indent (n+1) (init (prettyPrintStmts (n+1) initStmts))
-    ++ indent (n+1) ("[" ++ intercalate ", " params ++ "] = " ++ tailOptimizedAssignment (last stmts) ++ ";")
+    ++ indent (n + 1) (init (prettyPrintStmts (n + 1) initStmts))
+    ++ indent (n + 1) (squareBracketize (interpolateArgs params) ++ " = " ++ appendSemicolon (tailOptimizedAssignment (last stmts)))
     ++ indent n "}\n"
-  ++ indent (n-1) "}"
+    ++ indent (n - 1) "}"
   where
     initStmts = init stmts -- all statements except the last one because we want to get rid of the return statement
 
 tailOptimizedAssignment :: Stmt -> String
 tailOptimizedAssignment (StmtReturn (ReturnExpr (FuncCallExpr (FuncCall _ expr)))) = squareBracketize (interpolateArgs (map prettyPrintExpr expr))
-
 
 -- | Returns a string representation of a 'Block' with no newline characters.
 prettyPrintBlock :: Int -> Block -> String
@@ -787,12 +775,10 @@ prettyPrintBlock n (Block []) = curlyBracketize " "
 prettyPrintBlock n (Block [stmt]) = spaceCurlyBracketize (prettyPrintStmt n stmt)
 prettyPrintBlock n (Block stmts) = curlyBracketize ("\n" ++ indent n (prettyPrintStmts n stmts)) -- if multiple statements, put each on a new line
 
-
 -- | Returns a string representation of a 'Block' with a space character added before the opening brace if an else block is present.
 -- A helper function to add space for the if block when an else block is present
 prettyPrintBlockWithExtraLine :: Int -> Block -> String
 prettyPrintBlockWithExtraLine n block = init (prettyPrintBlock n block) ++ "\n"
-
 
 -- | Returns a string representation of a 'Conditional'.
 prettyPrintConditional :: Int -> Conditional -> String
