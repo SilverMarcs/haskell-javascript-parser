@@ -275,11 +275,7 @@ evalLogic (LNot e)     = fmap lnot (eval e)     where lnot (JSBool a) = JSBool (
 evalLogic (LBool b)    = Just b
 
 evalLogicExpr :: Parser JSValue
-evalLogicExpr = do
-    e <- logicExpr
-    case eval (Logical e) of
-        Just v  -> return v
-        Nothing -> failed (UnexpectedString "Failed to evaluate logic expression.")
+evalLogicExpr = evalExpr logicExpr evalLogic
 
 -- | ----------------------------
 -- | -- Arithmetic Expressions --
@@ -318,11 +314,7 @@ evalArith (Div e1 e2) = liftA2 divi (eval e1) (eval e2) where divi (JSInt a) (JS
 evalArith (Pow e1 e2) = liftA2 pow (eval e1) (eval e2) where pow (JSInt a) (JSInt b) = JSInt (a ^ b)
 
 evalArithExpr :: Parser JSValue
-evalArithExpr = do
-    e <- arithExpr
-    case eval (Arithmetic e) of
-        Just v  -> return v
-        Nothing -> failed (UnexpectedString "Failed to evaluate arithmetic expression.")
+evalArithExpr = evalExpr arithExpr evalArith
 
 -- | ----------------------------
 -- | -- Comparison Expressions --
@@ -356,11 +348,7 @@ evalCompare (GreaterThan e1 e2)  = liftA2 gt (eval e1) (eval e2) where gt (JSInt
 evalCompare (LessThan e1 e2)     = liftA2 lt (eval e1) (eval e2) where lt (JSInt a) (JSInt b) = JSBool (a < b)
 
 evalCompareExpr :: Parser JSValue
-evalCompareExpr = do
-    e <- compareExpr
-    case eval (Comparison e) of
-        Just v  -> return v
-        Nothing -> failed (UnexpectedString "Failed to evaluate comparison expression.")
+evalCompareExpr = evalExpr compareExpr evalCompare
 
 -- | -------------------------
 -- | -- Ternary Expressions --
@@ -411,12 +399,22 @@ eval (JsVal v)          = Just v
 eval (Arithmetic e)     = evalArith e
 eval (Logical e)        = evalLogic e
 eval (Comparison e)     = evalCompare e
+eval _                  = Nothing  -- we dont evaluate anything else at the moment
+
 
 evalUnifiedExpr :: Parser JSValue
 evalUnifiedExpr =
     evalArithExpr
     <|> evalLogicExpr
     <|> evalCompareExpr
+
+evalExpr :: Parser a -> (a -> Maybe JSValue) -> Parser JSValue
+evalExpr p evaluator = do
+    e <- p
+    case evaluator e of
+        Just v  -> return v
+        Nothing -> failed (UnexpectedString "Failed to evaluate expression.")
+
 
 
 -- | ------------------------
