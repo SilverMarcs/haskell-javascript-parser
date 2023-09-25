@@ -49,7 +49,9 @@ prettyPrintExerciseC :: ADT -> String
 prettyPrintExerciseC (StatementValues stmts) = prettyPrintStmts stmts
 
 
--- | Extra Bonus section that parses and evaluates simple arithmatic, logical and comparison expressions
+-------  Extra Bonus section  -------
+
+-- | Evaluates, parses and pretty prints simple arithmatic, logical and comparison expressions
 -- check out the test cases and results in javascript/inputs/D and javascript/output/D
 parseExerciseD :: Parser ADT
 parseExerciseD = ExprValue . JsVal <$> evalUnifiedExpr
@@ -57,7 +59,7 @@ parseExerciseD = ExprValue . JsVal <$> evalUnifiedExpr
 prettyPrintExerciseD :: ADT -> String
 prettyPrintExerciseD (ExprValue (JsVal v)) = prettyPrintJSValue v
 
--- | Extra Bonus section that parses lambda expressions/functions
+-- | Parses and pretty prints lambda const declarations
 -- check out the test cases and results in javascript/inputs/E and javascript/output/E
 parseExerciseE :: Parser ADT
 parseExerciseE = StatementValues <$> stmts

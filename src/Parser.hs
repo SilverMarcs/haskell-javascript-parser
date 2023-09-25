@@ -411,9 +411,9 @@ ternaryExpr =
   roundBracketed $
     Ternary
       <$> expr -- Parse the condition expression.
-      <* charTok '?' 
+      <* charTok '?'
       <*> expr -- Parse the true value expression.
-      <* charTok ':' 
+      <* charTok ':'
       <*> expr -- Parse the false value expression.
 
 -- | -------------------------
@@ -631,16 +631,26 @@ parseFunction str =
 -- pretty printing helper funcstion --
 
 -- | Wraps a string with the given start and end characters.
-wrapWith :: Char -> Char -> String -> String
-wrapWith start end s = start : s ++ [end]
+wrapWith :: String -> String -> String -> String
+wrapWith start end s = start ++ s ++ end
 
 -- | Parenthesizes a string.
 parenthesize :: String -> String
-parenthesize = wrapWith '(' ')'
+parenthesize = wrapWith "(" ")"
 
 -- | Parenthesizes a string and adds spaces around it.
 spaceParenthesize :: String -> String
-spaceParenthesize content = "(" ++ " " ++ content ++ " " ++ ")"
+spaceParenthesize = wrapWith "( " " )"
+
+-- | Wraps a string with square brackets.
+squareBracketize :: String -> String
+squareBracketize = wrapWith "[" "]"
+
+curlyBracketize :: String -> String
+curlyBracketize = wrapWith "{" "}"
+
+spaceCurlyBracketize :: String -> String
+spaceCurlyBracketize = wrapWith "{ " " }"
 
 -- | Determines if a string should be printed on multiple lines.
 shouldBeMultiLine :: String -> Bool
@@ -675,7 +685,7 @@ prettyPrintLogic :: LogicExpr -> String
 prettyPrintLogic (LAnd a b) = binaryOpPrettyPrint "&&" a b
 prettyPrintLogic (LOr a b) = binaryOpPrettyPrint "||" a b
 prettyPrintLogic (LNot a) = parenthesize $ "!" ++ prettyPrintExpr a
-prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v  -- one of the test inputs have braces around signle boolean, so i parenthsized it
+prettyPrintLogic (LBool v) = parenthesize $ prettyPrintJSValue v  -- one of the test inputs have braces around single boolean, so i parenthsized it
 
 -- | Pretty prints a comparison expression.
 prettyPrintComp :: CompareExpr -> String
@@ -690,7 +700,7 @@ prettyPrintJSValue (JSInt i) = show i
 prettyPrintJSValue (JSString s) = "\"" ++ s ++ "\""
 prettyPrintJSValue (JSBool b) = if b then "true" else "false"
 prettyPrintJSValue (JsVariable s) = s
-prettyPrintJSValue (JSList lst) = "[" ++ intercalate ", " (map prettyPrintJSValue lst) ++ "]"
+prettyPrintJSValue (JSList lst) = squareBracketize (interpolateArgs (map prettyPrintJSValue lst))
 
 -- | Pretty prints a combined expression.
 prettyPrintExpr :: Expr -> String
@@ -775,24 +785,15 @@ prettyPrintTailOptimizedBlock fname params (Block stmts) =
 
 -- | Returns a string representation of a 'Block' with no newline characters.
 prettyPrintBlock :: Block -> String
-prettyPrintBlock (Block []) = "{ }" -- if no statements, just print empty braces. later create HOF to parenthesize with third brackets or even somethign that lets you input hwich bracket you wanna insert. create valid data type for three types of braces TODO
-prettyPrintBlock (Block [stmt]) = "{ " ++ prettyPrintStmt stmt ++ " }" -- if only one statement, don't put it on a new line
-prettyPrintBlock (Block stmts) =
-  -- if multiple statements, put each on a new line
-  "{\n" ++ indent (prettyPrintStmts stmts) ++ "}"
-  
--- | Returns a string representation of a 'Block' with newline characters.
-prettyPrintBlockWithNewline :: Block -> String
-prettyPrintBlockWithNewline (Block []) = "{ }"
-prettyPrintBlockWithNewline (Block [stmt]) = "{" ++ prettyPrintStmt stmt ++ "}"
-prettyPrintBlockWithNewline (Block stmts) =
-  "{\n" ++ indent (prettyPrintStmts stmts) ++ "}"
-  
+prettyPrintBlock (Block []) = curlyBracketize " " -- if no statements, just print empty braces. later create HOF to parenthesize with third brackets or even somethign that lets you input hwich bracket you wanna insert. create valid data type for three types of braces TODO
+prettyPrintBlock (Block [stmt]) = spaceCurlyBracketize (prettyPrintStmt stmt)  -- if only one statement, don't put it on a new line
+prettyPrintBlock (Block stmts) = curlyBracketize ("\n" ++ indent (prettyPrintStmts stmts))   -- if multiple statements, put each on a new line
+
+
 -- | Returns a string representation of a 'Block' with a space character added before the opening brace if an else block is present.
 -- A helper function to add space for the if block when an else block is present
-prettyPrintBlockWithSpace :: Block -> String
-prettyPrintBlockWithSpace block =
-  init (prettyPrintBlock block) ++ "\n"
+prettyPrintBlockWithExtraLine :: Block -> String
+prettyPrintBlockWithExtraLine block = init (prettyPrintBlock block) ++ "\n"
   
 -- | Returns a string representation of a 'Conditional'.
 prettyPrintConditional :: Conditional -> String
@@ -802,6 +803,6 @@ prettyPrintConditional (If expr ifBlock (Just elseBlock)) =
   "if "
     ++ spaceParenthesize (prettyPrintExpr expr)
     ++ " "
-    ++ prettyPrintBlockWithSpace ifBlock
+    ++ prettyPrintBlockWithExtraLine ifBlock
     ++ "} else "
     ++ prettyPrintBlock elseBlock
