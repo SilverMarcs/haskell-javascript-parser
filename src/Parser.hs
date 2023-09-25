@@ -565,7 +565,10 @@ isTailRecursiveFunc fname params block = maybe False (isTailRecursiveReturn fnam
 
 -- | Determines whether a return statement is tail-recursive by checking if it returns a function call with the same name as the function being declared, with the same number of arguments as the number of parameters, and with no nested function calls.
 isTailRecursiveReturn :: String -> [String] -> ReturnStmt -> Bool
-isTailRecursiveReturn fname params (ReturnExpr (FuncCallExpr (FuncCall fname' args))) = fname == fname' && length args == length params && not (any hasNestedFuncCall args)
+isTailRecursiveReturn fname params (ReturnExpr (FuncCallExpr (FuncCall fname' args))) 
+  = fname == fname'  -- function name is the same
+  && length args == length params  -- number of arguments is the same as the number of parameters
+  && not (any hasNestedFuncCall args) -- there are no nested function calls
 isTailRecursiveReturn _ _ _ = False
 
 -- | Determines whether an expression contains a nested function call.
