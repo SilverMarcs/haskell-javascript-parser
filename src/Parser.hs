@@ -297,9 +297,9 @@ logicExpr = roundBracketed (logicNot <|> logicAnd <|> logicOr <|> jsBoolValue)
 
 -- | The 'evalLogic' function evaluates a logical expression and returns a 'JSValue'.
 evalLogic :: LogicExpr -> Maybe JSValue
-evalLogic (LAnd e1 e2) = liftA2 land (eval e1) (eval e2) where land (JSBool a) (JSBool b) = JSBool (a && b)
-evalLogic (LOr e1 e2)  = liftA2 lor (eval e1) (eval e2) where lor  (JSBool a) (JSBool b) = JSBool (a || b)
-evalLogic (LNot e)     = fmap lnot (eval e)     where lnot (JSBool a) = JSBool (not a)
+evalLogic (LAnd e1 e2) = liftA2 land (eval e1) (eval e2) where land a b = JSBool (toBool a && toBool b)
+evalLogic (LOr e1 e2)  = liftA2 lor (eval e1) (eval e2) where lor a b = JSBool (toBool a || toBool b)
+evalLogic (LNot e)     = fmap lnot (eval e)     where lnot a = JSBool (not (toBool a))
 evalLogic (LBool b)    = Just b
 
 -- | The 'evalLogicExpr' parser evaluates a logical expression and returns a 'JSValue'.
@@ -387,8 +387,8 @@ compareExpr = roundBracketed (equalsOp <|> notEqualsOp <|> greaterThanOp <|> les
 
 -- | Function for evaluating a comparison expression.
 evalCompare :: CompareExpr -> Maybe JSValue
-evalCompare (Equals e1 e2)       = liftA2 eq (eval e1) (eval e2) where eq a b = JSBool (a == b)
-evalCompare (NotEquals e1 e2)    = liftA2 neq (eval e1) (eval e2) where neq a b = JSBool (a /= b)
+evalCompare (Equals e1 e2)       = liftA2 eq (eval e1) (eval e2) where eq a b = JSBool (toBool a == toBool b)
+evalCompare (NotEquals e1 e2)    = liftA2 neq (eval e1) (eval e2) where neq a b = JSBool (toBool a /= toBool b)
 evalCompare (GreaterThan e1 e2)  = liftA2 gt (eval e1) (eval e2) where gt (JSInt a) (JSInt b) = JSBool (a > b)
 evalCompare (LessThan e1 e2)     = liftA2 lt (eval e1) (eval e2) where lt (JSInt a) (JSInt b) = JSBool (a < b)
 
@@ -458,6 +458,13 @@ evalUnifiedExpr =
   evalArithExpr
     <|> evalLogicExpr
     <|> evalCompareExpr
+
+-- | Converts a 'JSValue' to a boolean according to JavaScript's rules.
+toBool :: JSValue -> Bool
+toBool (JSBool b) = b
+toBool (JSInt 0) = False
+toBool (JSString "") = False
+toBool _ = True
 
 -- | 'evalExpr' is a higher-order function that takes a parser 'p' and an evaluator function 'evaluator'.
 -- It parses an expression using the parser 'p' and then evaluates it using the evaluator function 'evaluator'.
