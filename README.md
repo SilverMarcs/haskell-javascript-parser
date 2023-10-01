@@ -42,7 +42,9 @@ To run the pretty printers, add any valid JS (that is supported by this parser) 
 
 In a corrresponding folder file under root/javascript/output, the pretty printed version will appear after running `stack test`
 
-Note that files under **Folder A** can only parse/pretty print Expressions. Other folders should be able to handle statements. For more description on what Statment or Expression is, check Parser.hs
+Note that files under **Folder A** can only parse/pretty print Expressions. Other folders should be able to handle statements or expressions. For more description on what Statment or Expression is, check Parser.hs
+
+For evaluating expressions, we have a `evalExpr` function. But the most convenient way to test evaluation is to modify existing or create new .js files in `Folder D` in inputs and the corresponding output folder will contain the evaluated value
 
 ## Running the Code
 
