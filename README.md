@@ -1,10 +1,4 @@
----
-title: Assignment 2 - Parser and Transpiler
-author: FIT2102 Programming Paradigms
-margin: 1inch
----
-
-# Assignment 2: Parser and Transpiler
+# Parser and Transpiler
 
 Most parsing needs can be fulfilled by the `expr` or `stmt` parser functions as these are able to parse all sorts of expressions or statements supported by the program. Specific parsing functions can be found in Parser.hs if needed.
 
